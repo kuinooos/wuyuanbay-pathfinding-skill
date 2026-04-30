@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>清扫区域展示</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { width: 100%; height: 100%; font-family: "Microsoft YaHei", Arial, sans-serif; }
+        #container { display: flex; width: 100%; height: 100%; }
+        #map-container { flex: 1; width: 100%; height: 100%; }
+        #info-panel { width: 300px; background: white; border-left: 1px solid #ddd; overflow-y: auto; padding: 20px; box-shadow: -2px 0 4px rgba(0,0,0,0.1); }
+        #info-panel h2 { margin-bottom: 20px; color: #333; border-bottom: 2px solid #4ECDC4; padding-bottom: 10px; }
+        .region-item { padding: 12px; margin-bottom: 10px; background: #f9f9f9; border-left: 4px solid #ccc; border-radius: 2px; cursor: pointer; transition: all 0.3s ease; }
+        .region-item:hover { background: #f0f0f0; transform: translateX(4px); }
+        .region-item.active { background: #e8f4f8; border-left-color: #4ECDC4; }
+        .region-name { font-weight: bold; color: #333; margin-bottom: 4px; }
+        .region-color { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+        .region-coords { font-size: 12px; color: #666; margin-top: 6px; font-family: monospace; }
+        @media (max-width: 768px) { #info-panel { width: 100%; max-height: 200px; border-left: none; border-top: 1px solid #ddd; } #container { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="map-container"></div>
+        <div id="info-panel">
+            <h2>📍 选定区域</h2>
+            <div id="region-list"></div>
+        </div>
+    </div>
+    <script>
+        // 捕获页面错误以便调试地图加载问题
+        window.__errors = [];
+        window.onerror = function(message, source, lineno, colno, error) {
+            window.__errors.push({message, source, lineno, colno, stack: error && error.stack});
+        };
+        (function(){
+            const origErr = console.error;
+            console.error = function(...args){ window.__errors.push({console:'error', args: args}); origErr.apply(console, args); };
+        })();
+    </script>
+    <script src="https://webapi.amap.com/maps?v=2.0&key=ff74f328ab12ebcae370a2f3780a5fbb"></script>
+    <script>
+        const regionsData = [{"id": 0, "center": [118.1733825, 24.519976999999997], "boundary": [[118.17354256320553, 24.52018132576987], [118.17345343679446, 24.52022667423013], [118.17322243679446, 24.51977267423013], [118.17331156320553, 24.519727325769868]], "color": "#FF6B6B", "name": "region_1", "selected": true}, {"id": 1, "center": [118.173053, 24.5194555], "boundary": [[118.17330744867957, 24.519720607750667], [118.17322655132043, 24.51977939224933], [118.17279855132043, 24.51919039224933], [118.17287944867957, 24.51913160775067]], "color": "#4ECDC4", "name": "region_2", "selected": true}, {"id": 2, "center": [118.17268, 24.518983], "boundary": [[118.17287628944811, 24.51912769088624], [118.17280171055188, 24.51919430911376], [118.17248371055189, 24.51883830911376], [118.17255828944812, 24.51877169088624]], "color": "#45B7D1", "name": "region_3", "selected": true}, {"id": 3, "center": [118.1723355, 24.5186255], "boundary": [[118.17255576945803, 24.518769068331675], [118.17248623054198, 24.518840931668326], [118.17211523054198, 24.518481931668326], [118.17218476945803, 24.518410068331676]], "color": "#FFA07A", "name": "region_4", "selected": false}, {"id": 4, "center": [118.17190049999999, 24.5182585], "boundary": [[118.17218003843534, 24.518406028855377], [118.17211996156466, 24.518485971144624], [118.17162096156466, 24.518110971144623], [118.17168103843534, 24.518031028855376]], "color": "#98D8C8", "name": "region_5", "selected": false}, {"id": 5, "center": [118.1714, 24.5179205], "boundary": [[118.17167671222451, 24.518028117818258], [118.17162528777548, 24.51811388218174], [118.17112328777549, 24.51781288218174], [118.17117471222451, 24.517727117818257]], "color": "#F7DC6F", "name": "region_6", "selected": false}, {"id": 6, "center": [118.170925, 24.517645], "boundary": [[118.1711733648516, 24.51772633818594], [118.1711246351484, 24.517813661814056], [118.1706766351484, 24.51756366181406], [118.17072536485159, 24.517476338185944]], "color": "#BB8FCE", "name": "region_7", "selected": false}, {"id": 7, "center": [118.1705465, 24.517447500000003], "boundary": [[118.1707222404572, 24.517474735853284], [118.1706797595428, 24.517565264146718], [118.1703707595428, 24.51742026414672], [118.17041324045721, 24.517329735853284]], "color": "#85C1E2", "name": "region_8", "selected": false}, {"id": 8, "center": [118.17016050000001, 24.517287000000003], "boundary": [[118.17040976618036, 24.517328262832393], [118.17037423381966, 24.51742173716761], [118.16991123381965, 24.51724573716761], [118.16994676618035, 24.517152262832393]], "color": "#F8B739", "name": "region_9", "selected": false}, {"id": 9, "center": [118.169659, 24.51713], "boundary": [[118.16994137991337, 24.517150556860706], [118.16991662008662, 24.517247443139297], [118.16937662008662, 24.517109443139297], [118.16940137991337, 24.517012556860706]], "color": "#52B788", "name": "region_10", "selected": false}, {"id": 10, "center": [118.1690665, 24.516994500000003], "boundary": [[118.16939909764096, 24.517012030237424], [118.16937890235903, 24.51710996976258], [118.16873390235904, 24.516976969762577], [118.16875409764097, 24.516879030237423]], "color": "#FF6B6B", "name": "region_11", "selected": false}, {"id": 11, "center": [118.1684845, 24.516915], "boundary": [[118.16874650167976, 24.516878062623235], [118.16874149832024, 24.516977937376765], [118.16822249832025, 24.516951937376767], [118.16822750167977, 24.516852062623236]], "color": "#4ECDC4", "name": "region_12", "selected": false}, {"id": 12, "center": [118.16804350000001, 24.516868000000002], "boundary": [[118.16823420625238, 24.516852854858662], [118.16821579374763, 24.51695114514134], [118.16785279374763, 24.51688314514134], [118.16787120625237, 24.51678485485866]], "color": "#45B7D1", "name": "region_13", "selected": false}, {"id": 13, "center": [118.167764, 24.5167805], "boundary": [[118.16788595829291, 24.516790113781198], [118.16783804170709, 24.5168778862188], [118.16764204170708, 24.5167708862188], [118.16768995829291, 24.5166831137812]], "color": "#FFA07A", "name": "region_14", "selected": false}, {"id": 14, "center": [118.167528, 24.516619], "boundary": [[118.16769681541308, 24.51668762474995], [118.16763518458691, 24.51676637525005], [118.16735918458691, 24.516550375250052], [118.16742081541308, 24.51647162474995]], "color": "#98D8C8", "name": "region_15", "selected": false}, {"id": 15, "center": [118.167307, 24.5165], "boundary": [[118.16739656906684, 24.51646143340479], [118.16738343093316, 24.516560566595214], [118.16721743093316, 24.516538566595212], [118.16723056906685, 24.516439433404788]], "color": "#F7DC6F", "name": "region_16", "selected": false}, {"id": 16, "center": [118.1670065, 24.516531999999998], "boundary": [[118.1672143026403, 24.516439949401484], [118.1672336973597, 24.516538050598516], [118.1667986973597, 24.516624050598516], [118.1667793026403, 24.516525949401483]], "color": "#BB8FCE", "name": "region_17", "selected": false}, {"id": 17, "center": [118.16673349999999, 24.5165765], "boundary": [[118.16678764914192, 24.516525018251507], [118.16679035085807, 24.516624981748492], [118.16667935085808, 24.516627981748492], [118.16667664914193, 24.516528018251506]], "color": "#85C1E2", "name": "region_18", "selected": false}, {"id": 18, "center": [118.16633150000001, 24.5164035], "boundary": [[118.1667004894664, 24.516533343265884], [118.16665551053362, 24.516622656734114], [118.16596251053362, 24.516273656734114], [118.1660074894664, 24.516184343265884]], "color": "#F8B739", "name": "region_19", "selected": false}, {"id": 19, "center": [118.16577000000001, 24.516018], "boundary": [[118.16602002182022, 24.516193314259024], [118.1659499781798, 24.516264685740975], [118.16551997817979, 24.515842685740974], [118.16559002182021, 24.515771314259023]], "color": "#52B788", "name": "region_20", "selected": false}, {"id": 20, "center": [118.165398, 24.5155535], "boundary": [[118.16559750789607, 24.51578067361072], [118.16551249210393, 24.515833326389277], [118.16519849210393, 24.515326326389278], [118.16528350789606, 24.51527367361072]], "color": "#FF6B6B", "name": "region_21", "selected": false}, {"id": 21, "center": [118.16510650000001, 24.514951], "boundary": [[118.16528765521078, 24.515282019696706], [118.16519434478921, 24.515317980303294], [118.16492534478922, 24.514619980303294], [118.16501865521079, 24.514584019696706]], "color": "#4ECDC4", "name": "region_22", "selected": false}, {"id": 22, "center": [118.16492550000001, 24.51436], "boundary": [[118.165021101769, 24.514592565155958], [118.16492289823101, 24.514611434844042], [118.164829898231, 24.514127434844042], [118.164928101769, 24.514108565155958]], "color": "#45B7D1", "name": "region_23", "selected": false}, {"id": 23, "center": [118.16490999999999, 24.5138265], "boundary": [[118.16492871963649, 24.514123287508514], [118.1648292803635, 24.514112712491485], [118.1648912803635, 24.513529712491486], [118.16499071963649, 24.513540287508516]], "color": "#FFA07A", "name": "region_24", "selected": false}, {"id": 24, "center": [118.16510249999999, 24.5132535], "boundary": [[118.16498436942862, 24.513559881572725], [118.16489763057137, 24.513510118427277], [118.16522063057137, 24.512947118427277], [118.16530736942862, 24.512996881572725]], "color": "#98D8C8", "name": "region_25", "selected": false}, {"id": 25, "center": [118.16551949999999, 24.512775], "boundary": [[118.16529453045598, 24.513011596606635], [118.165233469544, 24.512932403393368], [118.16574446954401, 24.512538403393368], [118.16580553045598, 24.512617596606635]], "color": "#F7DC6F", "name": "region_26", "selected": false}, {"id": 26, "center": [118.16617600000001, 24.5125035], "boundary": [[118.16578413299548, 24.512627158807895], [118.16576586700451, 24.512528841192108], [118.16656786700452, 24.512379841192107], [118.16658613299549, 24.512478158807895]], "color": "#BB8FCE", "name": "region_27", "selected": false}, {"id": 27, "center": [118.167107, 24.512565000000002], "boundary": [[118.16656457243865, 24.512477430937622], [118.16658942756136, 24.51238056906238], [118.16764942756136, 24.51265256906238], [118.16762457243864, 24.51274943093762]], "color": "#85C1E2", "name": "region_28", "selected": false}, {"id": 28, "center": [118.16870349999999, 24.513303999999998], "boundary": [[118.16761239108594, 24.512744524721125], [118.16766160891406, 24.512657475278875], [118.16979460891406, 24.513863475278875], [118.16974539108594, 24.513950524721125]], "color": "#F8B739", "name": "region_29", "selected": false}, {"id": 29, "center": [118.17054949999999, 24.514161], "boundary": [[118.16975450915668, 24.513954539812502], [118.16978549084332, 24.513859460187497], [118.17134449084332, 24.514367460187497], [118.17131350915668, 24.514462539812502]], "color": "#52B788", "name": "region_30", "selected": false}, {"id": 30, "center": [118.17175449999999, 24.514889500000002], "boundary": [[118.17129177488961, 24.514448380999934], [118.17136622511039, 24.514381619000066], [118.17221722511039, 24.515330619000068], [118.17214277488961, 24.515397380999936]], "color": "#FF6B6B", "name": "region_31", "selected": false}, {"id": 31, "center": [118.17235149999999, 24.5157725], "boundary": [[118.17213389807475, 24.515383354908643], [118.17222610192525, 24.51534464509136], [118.17256910192525, 24.51616164509136], [118.17247689807475, 24.51620035490864]], "color": "#4ECDC4", "name": "region_32", "selected": false}, {"id": 32, "center": [118.1729105, 24.516419], "boundary": [[118.17249683194574, 24.516223605550532], [118.17254916805426, 24.516138394449467], [118.17332416805426, 24.516614394449466], [118.17327183194574, 24.51669960555053]], "color": "#45B7D1", "name": "region_33", "selected": false}, {"id": 33, "center": [118.173978, 24.5167735], "boundary": [[118.17328955683818, 24.516706281974578], [118.17330644316182, 24.51660771802542], [118.17466644316181, 24.51684071802542], [118.17464955683818, 24.51693928197458]], "color": "#FFA07A", "name": "region_34", "selected": false}, {"id": 34, "center": [118.17486099999999, 24.5169895], "boundary": [[118.17463599388738, 24.516934896893073], [118.17468000611261, 24.516845103106927], [118.17508600611262, 24.517044103106926], [118.17504199388739, 24.51713389689307]], "color": "#98D8C8", "name": "region_35", "selected": false}, {"id": 35, "center": [118.17527150000001, 24.5173885], "boundary": [[118.1750229002733, 24.517117474768916], [118.17510509972671, 24.51706052523108], [118.1755200997267, 24.517659525231082], [118.1754379002733, 24.517716474768918]], "color": "#F7DC6F", "name": "region_36", "selected": false}, {"id": 36, "center": [118.1756765, 24.518448], "boundary": [[118.17543060732432, 24.51770057572822], [118.17552739267568, 24.51767542427178], [118.17592239267567, 24.51919542427178], [118.17582560732431, 24.51922057572822]], "color": "#BB8FCE", "name": "region_37", "selected": false}, {"id": 37, "center": [118.16868, 24.515491], "boundary": [[118.16768, 24.516689], [118.167864, 24.516794], [118.169893, 24.514001], [118.169715, 24.513896]], "color": "#85C1E2", "name": "region_38", "selected": false}, {"id": 38, "center": [118.17185, 24.516957], "boundary": [[118.171136, 24.517746], [118.171166, 24.517763], [118.172519, 24.516208], [118.172499, 24.51618]], "color": "#F8B739", "name": "region_39", "selected": false}];
+        const map = new AMap.Map("map-container", { zoom: 14, center: [118.170645, 24.51649], resizeEnable: true, mapStyle: "amap://styles/light" });
+        const polygons = [], markers = [];
+
+        function initMap() {
+            let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+            regionsData.forEach((region) => {
+                region.boundary.forEach(point => {
+                    minLng = Math.min(minLng, point[0]);
+                    minLat = Math.min(minLat, point[1]);
+                    maxLng = Math.max(maxLng, point[0]);
+                    maxLat = Math.max(maxLat, point[1]);
+                });
+
+                const fillCol = region.selected ? region.color : '#CCCCCC';
+                const strokeCol = region.selected ? region.color : '#999999';
+                const polygon = new AMap.Polygon({
+                    path: region.boundary, strokeColor: strokeCol, strokeWeight: 2, strokeOpacity: 0.9,
+                    fillColor: fillCol, fillOpacity: region.selected ? 0.2 : 0.12, strokeStyle: "solid"
+                });
+                map.add(polygon);
+                polygons.push(polygon);
+
+                if (region.selected) {
+                    const marker = new AMap.Marker({ position: region.center, offset: new AMap.Pixel(-12, -12), title: region.name, zIndex: 100 });
+                    const markerContent = document.createElement("div");
+                    markerContent.style.cssText = "width:28px;height:28px;line-height:28px;background:"+region.color+";color:white;border-radius:50%;text-align:center;font-weight:bold;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,0.4);border:3px solid white";
+                    markerContent.innerText = region.id + 1;
+                    marker.setContent(markerContent);
+                    marker.on("click", function() {
+                        const infoWindow = new AMap.InfoWindow({ content: `<div style="padding:10px;min-width:200px;"><div style="font-weight:bold;margin-bottom:8px;color:${region.color};"><strong>■ ${region.name} (${region.id + 1})</strong></div><div style="font-size:12px;color:#666;"><p><strong>中心坐标：</strong><br/>${region.center[0].toFixed(6)}°, ${region.center[1].toFixed(6)}°</p><p style="margin-top:8px;"><strong>边界点数：</strong> ${region.boundary.length}</p></div></div>` , offset: new AMap.Pixel(0, -35) });
+                        infoWindow.open(map, region.center);
+                    });
+                    map.add(marker);
+                    markers.push({ id: region.id, marker: marker });
+                }
+
+                // 多边形点击：非选中 -> 临时选中（显示彩色与标号）；已临时选中 -> 取消临时选中
+                polygon.on('click', function() {
+                    // region.selected 表示初始化选中，region._selected 表示用户点击临时选中
+                    if (!region.selected && !region._selected) {
+                        region._selected = true;
+                        polygon.setOptions({ fillColor: region.color, strokeColor: region.color, fillOpacity: 0.2 });
+                        const newMarker = new AMap.Marker({ position: region.center, offset: new AMap.Pixel(-12, -12), title: region.name, zIndex: 100 });
+                            const mc = document.createElement('div');
+                            mc.style.cssText = "width:28px;height:28px;line-height:28px;background:"+region.color+";color:white;border-radius:50%;text-align:center;font-weight:bold;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,0.4);border:3px solid white";
+                            mc.innerText = region.id + 1;
+                        newMarker.setContent(mc);
+                        map.add(newMarker);
+                        markers.push({ id: region.id, marker: newMarker });
+                        fillInfoPanel();
+                    } else if (region._selected) {
+                        region._selected = false;
+                        polygon.setOptions({ fillColor: '#CCCCCC', strokeColor: '#999999', fillOpacity: 0.12 });
+                        for (let i = markers.length - 1; i >= 0; i--) {
+                            if (markers[i].id === region.id) {
+                                map.remove(markers[i].marker);
+                                markers.splice(i, 1);
+                            }
+                        }
+                        fillInfoPanel();
+                    }
+                });
+
+            });
+
+            const bounds = new AMap.Bounds([minLng, minLat], [maxLng, maxLat]);
+            map.setBounds(bounds, false, [50, 50, 50, 50]);
+            fillInfoPanel();
+        }
+
+        function fillInfoPanel() {
+            const listContainer = document.getElementById("region-list");
+            listContainer.innerHTML = "";
+            regionsData.forEach(region => {
+                const isSelected = region.selected || region._selected;
+                if (!isSelected) return;
+                const item = document.createElement("div");
+                item.className = "region-item";
+                item.innerHTML = `<div class="region-name"><span class="region-color" style="background-color:${region.color}"></span>${region.name} (ID: ${region.id + 1})</div><div class="region-coords">中心: [${region.center[0].toFixed(4)}, ${region.center[1].toFixed(4)}]</div>`;
+                item.addEventListener("click", function() {
+                    map.setCenter(region.center);
+                    map.setZoom(16);
+                    this.classList.toggle("active");
+                });
+                listContainer.appendChild(item);
+            });
+        }
+
+        (function start() {
+            function tryInit() {
+                if (typeof AMap !== 'undefined') {
+                    initMap();
+                } else {
+                    console.error('高德地图API 加载失败');
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', tryInit);
+            } else {
+                tryInit();
+            }
+        })();
+
+        window.addEventListener("resize", function() { map.resize(); });
+    </script>
+</body>
+</html>

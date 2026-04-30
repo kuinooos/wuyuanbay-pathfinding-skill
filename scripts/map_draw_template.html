@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高德地图区域展示</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 99%;
+            height: 97vh;
+        }
+        #map-container {
+            width: 96%;
+            height: 94%;
+            border: 1px solid #aaa;
+            margin: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 地图容器 -->
+    <div id="map-container"></div>
+
+    <!-- 高德地图API -->
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=ff74f328ab12ebcae370a2f3780a5fbb"></script>
+
+    <script>
+        // 初始化地图
+        const map = new AMap.Map('map-container', {
+            zoom: 14,
+            center: [118.170645, 24.51649], // 五缘湾湿地公园中心点
+            resizeEnable: true
+        });
+
+        // 从JSON文件加载区域数据
+        async function loadRegions() {
+            try {
+                const response = await fetch('rectangles.json');
+                const data = await response.json();
+                // 将JSON数据转换为regions格式
+                return data.map(item => ({
+                    id: item.id + 1, // id从1开始
+                    name: `区域${item.id + 1}`,
+                    center: item.center,
+                    boundary: item.boundary
+                }));
+            } catch (error) {
+                console.error('加载区域数据失败:', error);
+                return [];
+            }
+        }
+
+        // 从config.json加载地图范围配置
+        async function loadConfig() {
+            try {
+                const response = await fetch('config.json');
+                const config = await response.json();
+                return config.bounds || [118.164192, 24.51199, 118.181727, 24.52431];
+            } catch (error) {
+                console.error('加载配置文件失败:', error);
+                // 返回默认范围
+                return [118.164192, 24.51199, 118.181727, 24.52431];
+            }
+        }
+
+        // 初始化地图数据的异步函数
+        async function initMap() {
+            // 加载配置和区域数据
+            const [bounds, regions] = await Promise.all([loadConfig(), loadRegions()]);
+            console.log('地图范围配置:', bounds);
+
+            // 强制设置地图显示范围（使用config.json中的bounds）
+            // bounds格式: [minLng, minLat, maxLng, maxLat]
+            const mapBounds = new AMap.Bounds([bounds[0], bounds[1]], [bounds[2], bounds[3]]);
+            map.setBounds(mapBounds, false, [0, 0, 0, 0]);
+
+            // 示例POI数据（坐标点和名称）
+            const pois = [
+                { name: "公园入口", position: [118.173501,24.520202] },
+                { name: "公园出口", position: [118.176368,24.519747] },
+            ];
+
+            // 示例任务事件数据（需要完成的任务地点）
+            const taskPois = [];
+
+            // 存储创建的多边形和标记
+            const polygons = [];
+            const markers = [];
+            const poiMarkers = [];
+            const taskMarkers = [];
+
+            // 定义不同区域的颜色
+            const colors = ['#FF6B6B'];
+
+            // 1. 绘制区域多边形
+            regions.forEach(region => {
+                // 创建多边形
+                const polygon = new AMap.Polygon({
+                    path: region.boundary,
+                    strokeColor: colors[0] || '#FF6B6B',
+                    strokeWeight: 2,
+                    strokeOpacity: 0.8,
+                    fillColor: colors[0] || '#FF6B6B',
+                    fillOpacity: 0.3,
+                    strokeStyle: 'solid'
+                });
+
+                // 添加多边形到地图
+                map.add(polygon);
+                polygons.push(polygon);
+
+                // 2. 添加区域中心POI标记
+                const marker = new AMap.Marker({
+                    position: region.center,
+                    offset: new AMap.Pixel(-12, -12),
+                    title: region.name
+                });
+
+                // 创建自定义内容（带数字编号）
+                const markerContent = document.createElement('div');
+                markerContent.style.cssText = `
+                    width: 24px;
+                    height: 24px;
+                    line-height: 24px;
+                    background: ${colors[0] || '#FF6B6B'};
+                    color: white;
+                    border-radius: 50%;
+                    text-align: center;
+                    font-weight: bold;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    border: 2px solid white;
+                `;
+                markerContent.innerText = region.id;
+
+                // 设置标记内容
+                marker.setContent(markerContent);
+
+                // 添加信息窗口
+                const infoWindow = new AMap.InfoWindow({
+                    content: `<div style="padding: 8px;">
+                        <strong>区域${region.id}: ${region.name}</strong><br/>
+                        <small>中心点坐标: ${region.center[0].toFixed(4)}, ${region.center[1].toFixed(4)}</small>
+                    </div>`,
+                    offset: new AMap.Pixel(0, -30)
+                });
+
+                // 点击标记显示信息
+                marker.on('click', () => {
+                    infoWindow.open(map, region.center);
+                });
+
+                // 添加到地图
+                map.add(marker);
+                markers.push(marker);
+            });
+
+            // 3. 绘制POI点
+            pois.forEach((poi) => {
+                const poiMarker = new AMap.Marker({
+                    position: poi.position,
+                    title: poi.name
+                });
+
+                const poiContent = document.createElement('div');
+                poiContent.style.cssText = `
+                    position: relative;
+                    width: 0;
+                    height: 0;
+                `;
+
+                const dot = document.createElement('div');
+                dot.style.cssText = `
+                    position: absolute;
+                    width: 16px;
+                    height: 16px;
+                    background: #0066FF;
+                    border-radius: 50%;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+                    left: -8px;
+                    top: -8px;
+                    z-index: 1000;
+                `;
+
+                const label = document.createElement('div');
+                label.style.cssText = `
+                    position: absolute;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    padding: 3px 6px;
+                    background: rgba(0,102,255,0.9);
+                    color: white;
+                    border-radius: 4px;
+                    font-size: 11px;
+                    font-weight: bold;
+                    white-space: nowrap;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    pointer-events: none;
+                    z-index: 1001;
+                `;
+                label.innerText = poi.name;
+
+                poiContent.appendChild(dot);
+                poiContent.appendChild(label);
+                poiMarker.setContent(poiContent);
+                map.add(poiMarker);
+                poiMarkers.push(poiMarker);
+            });
+
+            // 4. 绘制任务事件POI点（红色感叹号样式）
+            taskPois.forEach((task) => {
+                const taskMarker = new AMap.Marker({
+                    position: task.position,
+                    title: task.name
+                });
+
+                const taskContent = document.createElement('div');
+                taskContent.style.cssText = `
+                    position: relative;
+                    width: 0;
+                    height: 0;
+                `;
+
+                const icon = document.createElement('div');
+                icon.style.cssText = `
+                    position: absolute;
+                    width: 20px;
+                    height: 20px;
+                    background: #FF4444;
+                    border-radius: 50%;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 14px;
+                    left: -12px;
+                    top: -12px;
+                `;
+                icon.innerText = "!";
+
+                const label = document.createElement('div');
+                label.style.cssText = `
+                    position: absolute;
+                    top: 24px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    padding: 2px 6px;
+                    background: rgba(255,68,68,0.9);
+                    border-radius: 3px;
+                    font-size: 10px;
+                    color: white;
+                    white-space: nowrap;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                    pointer-events: none;
+                    font-weight: bold;
+                `;
+                label.innerText = task.name;
+
+                taskContent.appendChild(icon);
+                taskContent.appendChild(label);
+                taskMarker.setContent(taskContent);
+                map.add(taskMarker);
+                taskMarkers.push(taskMarker);
+            });
+
+            // 5. 地图范围已由config.json中的bounds强制设定
+            // 不再根据POI自动调整视野，确保始终显示config.json定义的精确范围
+            console.log('地图显示范围已固定为config.json配置的范围');
+
+            console.log(`地图已加载，共绘制${regions.length}个区域，${pois.length}个POI点，${taskPois.length}个任务点`);
+            console.log('区域详情：', regions);
+            console.log('POI详情：', pois);
+            console.log('任务详情：', taskPois);
+        }
+
+        // 启动地图初始化
+        initMap();
+
+
+    </script>
+</body>
+</html>

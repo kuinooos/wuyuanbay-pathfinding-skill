@@ -1,0 +1,421 @@
+{
+  "skill_name": "car-cleaning-task",
+  "description": "清洁小车任务下发助手的测试用例集",
+  "evals": [
+    {
+      "id": 1,
+      "name": "单区域指定",
+      "prompt": "清扫5号区域",
+      "expected_output": "JSON格式结果，selected_regions包含[5]",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "选择正确区域",
+          "type": "json_path",
+          "path": "selected_regions",
+          "expected": "[5]"
+        },
+        {
+          "name": "区域数量正确",
+          "type": "json_path",
+          "path": "selected_count",
+          "expected": "1"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "多区域指定",
+      "prompt": "清扫1、3、5号区域",
+      "expected_output": "JSON格式结果，selected_regions包含[1,3,5]",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "选择正确区域",
+          "type": "json_path",
+          "path": "selected_regions",
+          "expected": "[1, 3, 5]"
+        },
+        {
+          "name": "区域数量正确",
+          "type": "json_path",
+          "path": "selected_count",
+          "expected": "3"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "区域范围指定",
+      "prompt": "清扫1-10号区域",
+      "expected_output": "JSON格式结果，selected_regions包含[1,2,3,4,5,6,7,8,9,10]",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "选择正确区域",
+          "type": "json_path",
+          "path": "selected_regions",
+          "expected": "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
+        },
+        {
+          "name": "区域数量正确",
+          "type": "json_path",
+          "path": "selected_count",
+          "expected": "10"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "混合格式指定",
+      "prompt": "清扫1-5号区域和10、15号区域",
+      "expected_output": "JSON格式结果，selected_regions包含[1,2,3,4,5,10,15]",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "选择正确区域",
+          "type": "json_path",
+          "path": "selected_regions",
+          "expected": "[1, 2, 3, 4, 5, 10, 15]"
+        },
+        {
+          "name": "区域数量正确",
+          "type": "json_path",
+          "path": "selected_count",
+          "expected": "7"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "厕所地点检索",
+      "prompt": "清扫厕所附近的3个区域",
+      "expected_output": "JSON格式结果，包含POI信息和选择的区域",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "区域数量正确",
+          "type": "json_path",
+          "path": "selected_count",
+          "expected": "3"
+        },
+        {
+          "name": "POI信息存在",
+          "type": "json_path_exists",
+          "path": "poi_info",
+          "expected": "true"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "餐厅地点检索",
+      "prompt": "打扫餐厅周围5个区域",
+      "expected_output": "JSON格式结果，包含餐厅POI信息和5个选择的区域",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "区域数量正确",
+          "type": "json_path",
+          "path": "selected_count",
+          "expected": "5"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "北部位置选择",
+      "prompt": "清扫北部区域的5个区域",
+      "expected_output": "JSON格式结果，selected_regions包含北部区域的编号",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "选择北部区域",
+          "type": "custom",
+          "description": "选择的区域应在1-10范围内"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "中部位置选择",
+      "prompt": "打扫中部区域",
+      "expected_output": "JSON格式结果，selected_regions包含中部区域的编号",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "选择中部区域",
+          "type": "custom",
+          "description": "选择的区域应在11-25范围内"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "南部位置选择",
+      "prompt": "清理南部区域",
+      "expected_output": "JSON格式结果，selected_regions包含南部区域的编号",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "选择南部区域",
+          "type": "custom",
+          "description": "选择的区域应在26-39范围内"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "复杂需求解析",
+      "prompt": "清扫展厅周围和人流量大的地方",
+      "expected_output": "JSON格式结果，综合分析多个条件选择区域",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "有选择理由",
+          "type": "json_path_exists",
+          "path": "reasoning",
+          "expected": "true"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "全部区域清扫",
+      "prompt": "清扫1-39号全部区域",
+      "expected_output": "JSON格式结果，selected_regions包含所有39个区域",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "选择全部区域",
+          "type": "json_path",
+          "path": "selected_count",
+          "expected": "39"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "name": "停车场附近清扫",
+      "prompt": "清扫停车场周边区域",
+      "expected_output": "JSON格式结果，包含停车场POI信息和选择的区域",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "POI信息存在",
+          "type": "json_path_exists",
+          "path": "poi_info",
+          "expected": "true"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "name": "入口附近清扫",
+      "prompt": "清扫入口附近3个区域",
+      "expected_output": "JSON格式结果，选择入口附近的3个区域",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "区域数量正确",
+          "type": "json_path",
+          "path": "selected_count",
+          "expected": "3"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "name": "默认区域选择",
+      "prompt": "开始清扫",
+      "expected_output": "JSON格式结果，使用默认区域选择",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "有选择区域",
+          "type": "custom",
+          "description": "应返回默认的区域选择"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "name": "卫生间关键词",
+      "prompt": "清扫卫生间附近",
+      "expected_output": "JSON格式结果，识别卫生间关键词",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "name": "海水浴场旁边厕所优化",
+      "prompt": "清扫海水浴场旁边的厕所附近区域",
+      "expected_output": "JSON格式结果，先搜索海水浴场POI，再通过视觉分析识别旁边的厕所位置",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "POI信息存在",
+          "type": "json_path_exists",
+          "path": "poi_info",
+          "expected": "true"
+        },
+        {
+          "name": "有视觉分析说明",
+          "type": "json_path_exists",
+          "path": "visual_analysis",
+          "expected": "true"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "name": "桥头厕所路径清扫",
+      "prompt": "打扫日圆大桥旁边厕所到地圆桥旁边厕所的路段",
+      "expected_output": "JSON格式结果，搜索两个桥头POI，通过视觉分析识别厕所位置并规划路径",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "起点信息存在",
+          "type": "json_path_exists",
+          "path": "start_point",
+          "expected": "true"
+        },
+        {
+          "name": "终点信息存在",
+          "type": "json_path_exists",
+          "path": "end_point",
+          "expected": "true"
+        },
+        {
+          "name": "路径区域连续",
+          "type": "custom",
+          "description": "选择的区域应该形成连续的路径"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "name": "厕所附近区域数量指定",
+      "prompt": "清扫海水浴场旁边厕所附近的5个区域",
+      "expected_output": "JSON格式结果，指定厕所附近的具体区域数量",
+      "files": [],
+      "assertions": [
+        {
+          "name": "状态成功",
+          "type": "json_path",
+          "path": "status",
+          "expected": "success"
+        },
+        {
+          "name": "区域数量正确",
+          "type": "json_path",
+          "path": "selected_count",
+          "expected": "5"
+        }
+      ]
+    }
+  ]
+}
