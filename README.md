@@ -46,8 +46,6 @@ git push -u origin main
 gh repo create kuinooos/car_tool --public --source=. --remote=origin --push
 ```
 
-注意：我无法直接替你把代码推到 https://github.com/kuinooos；上面命令需要你在本机上运行或提供带权限的令牌由我代为操作。
-
 ## 配置
 - `config.json`：包含任务下发相关配置（示例见 `scripts/config.json`）。
 - `known_landmarks.json`：已知地标（用于地图匹配与标注）。
