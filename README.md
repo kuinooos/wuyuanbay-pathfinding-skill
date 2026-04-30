@@ -30,21 +30,6 @@ cd c:\Users\18325\.claude\skills\car_tool\scripts
 python visualize_regions.py 0 1 2 --no-open
 ```
 
-3. 若要按照仓库的方式发布到 GitHub（替换为你的 repo 路径）：
-
-```bash
-git init
-git add .
-git commit -m "Initial commit: car_tool skill"
-git branch -M main
-# 在 GitHub 上创建仓库后，将 remote 替换为你的仓库地址
-git remote add origin https://github.com/kuinooos/car_tool.git
-git push -u origin main
-
-# 或使用 GitHub CLI 直接创建并推送（如果已安装 gh）
-gh repo create kuinooos/car_tool --public --source=. --remote=origin --push
-```
-
 ## 配置
 - `config.json`：包含任务下发相关配置（示例见 `scripts/config.json`）。
 - `known_landmarks.json`：已知地标（用于地图匹配与标注）。
