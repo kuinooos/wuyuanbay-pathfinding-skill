@@ -8,6 +8,7 @@ import json
 import shutil
 import os
 import re
+import math
 import time
 import http.server
 import socketserver
@@ -29,6 +30,29 @@ def read_html_template(html_path: str) -> str:
     """读取HTML模板文件"""
     with open(html_path, 'r', encoding='utf-8') as f:
         return f.read()
+
+
+def read_config_bounds(config_file_path: str) -> list:
+    """读取地图范围配置"""
+    if not os.path.exists(config_file_path):
+        return [118.164192, 24.51199, 118.181727, 24.52431]
+
+    with open(config_file_path, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+    return config.get('bounds', [118.164192, 24.51199, 118.181727, 24.52431])
+
+
+def _lnglat_to_mercator(lng: float, lat: float) -> tuple[float, float]:
+    """将经纬度转换为Web Mercator坐标。"""
+    radius = 20037508.342789244
+    x = lng * radius / 180.0
+    y = math.log(math.tan((90.0 + lat) * math.pi / 360.0)) * radius / math.pi
+    return x, y
+
+
+def estimate_viewport_size(bounds: list, base_height: int = 1200) -> tuple[int, int]:
+    """返回与参考图一致的固定截图尺寸。"""
+    return 1920, base_height
 
 
 def generate_new_html(html_content: str, pois: list) -> str:
@@ -121,19 +145,28 @@ class SimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         pass
 
 
-def start_http_server(temp_dir: str, port: int = 8765) -> socketserver.TCPServer:
+def start_http_server(temp_dir: str, port: int = 8765) -> tuple[socketserver.TCPServer, int]:
     """启动HTTP服务器"""
+    socketserver.TCPServer.allow_reuse_address = True
     handler = lambda *args, **kwargs: SimpleHTTPRequestHandler(*args, directory=temp_dir, **kwargs)
-    httpd = socketserver.TCPServer(("", port), handler)
+    try:
+        httpd = socketserver.TCPServer(("", port), handler)
+    except OSError as e:
+        if getattr(e, "errno", None) == 98:
+            httpd = socketserver.TCPServer(("", 0), handler)
+            port = httpd.server_address[1]
+            print(f"[警告] 端口 {port} 已被占用，已自动切换到可用端口")
+        else:
+            raise
 
     server_thread = threading.Thread(target=httpd.serve_forever)
     server_thread.daemon = True
     server_thread.start()
 
-    return httpd
+    return httpd, port
 
 
-def take_screenshot(url: str, output_path: str, width: int = 1920, height: int = 1200):
+def take_screenshot(url: str, output_path: str, width: int = 1280, height: int = 1000):
     """使用Playwright对页面进行截图"""
     try:
         with sync_playwright() as p:
@@ -145,23 +178,20 @@ def take_screenshot(url: str, output_path: str, width: int = 1920, height: int =
                     print(f"[警告] Chromium 浏览器未安装，生成占位符图像")
                     print(f"[提示] 请运行以下命令安装浏览器：")
                     print(f"      python -m playwright install chromium")
-                    create_placeholder_image(output_path, width, height)
                     return
                 raise
 
             page = browser.new_page(viewport={'width': width, 'height': height})
 
             # 加载页面
-            page.goto(url)
+            page.goto(url, wait_until='domcontentloaded')
 
-            # 等待页面加载完成（等待地图渲染）
-            # 等待一段时间让高德地图API加载和渲染
-            page.wait_for_timeout(10000)  # 等待10秒让地图完全渲染
+            # 等待地图容器可见，然后给 AMap 一段固定渲染缓冲时间
+            map_container = page.locator('#map-container')
+            map_container.wait_for(state='visible')
+            page.wait_for_timeout(3000)
 
-            # 也可以等待特定的元素出现来表示地图已加载
-            # page.wait_for_selector('#map-container', state='visible')
-
-            # 截图
+            # 直接截取当前视口，和页面“刚打开时看到的大小”保持一致
             page.screenshot(path=output_path, full_page=False)
 
             browser.close()
@@ -218,7 +248,8 @@ def create_placeholder_image(output_path: str, width: int = 1920, height: int = 
 def main(
         poi_file_path: str = '',
         screenshot_path: str = 'screenshot.png',
-        port: int = 8765
+        port: int = 8765,
+        html_output_dir: str = ''
 ):
     """主函数"""
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -287,9 +318,18 @@ def main(
     html_path = save_html(new_html, temp_dir)
     print(f"[信息] HTML文件已保存: {html_path}")
 
+    # 如果指定了HTML输出目录，将HTML复制到该目录（持久保存，不会被清理）
+    if html_output_dir:
+        if not os.path.isabs(html_output_dir):
+            html_output_dir = os.path.abspath(html_output_dir)
+        os.makedirs(html_output_dir, exist_ok=True)
+        html_output_path = os.path.join(html_output_dir, 'index.html')
+        shutil.copy2(html_path, html_output_path)
+        print(f"[信息] HTML文件已复制到: {html_output_path}")
+
     # 5. 启动HTTP服务器
-    httpd = start_http_server(temp_dir, port)
-    url = f"http://localhost:{port}/index.html"
+    httpd, actual_port = start_http_server(temp_dir, port)
+    url = f"http://localhost:{actual_port}/index.html"
 
     # 等待服务器启动
     time.sleep(1)
@@ -361,11 +401,18 @@ if __name__ == "__main__":
         default=8765,
         help='HTTP服务器端口 (默认: 8765)'
     )
+    parser.add_argument(
+        '--html-output-dir',
+        type=str,
+        default='',
+        help='HTML文件输出目录（持久保存，不会被自动清理）'
+    )
 
     args = parser.parse_args()
 
     main(
         poi_file_path=args.poi_file,
         screenshot_path=args.screenshot_path,
-        port=args.port
+        port=args.port,
+        html_output_dir=args.html_output_dir
     )

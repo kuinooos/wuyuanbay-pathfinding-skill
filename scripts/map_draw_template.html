@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -8,14 +9,15 @@
         body, html {
             margin: 0;
             padding: 0;
-            width: 99%;
-            height: 97vh;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
         }
         #map-container {
-            width: 96%;
-            height: 94%;
-            border: 1px solid #aaa;
-            margin: 12px;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            margin: 0;
         }
     </style>
 </head>
@@ -71,10 +73,16 @@
             const [bounds, regions] = await Promise.all([loadConfig(), loadRegions()]);
             console.log('地图范围配置:', bounds);
 
+            // 标记地图初始化流程已经进入最终视野设置阶段
+            window.map_ready = false;
+
+            // 先刷新一次尺寸，避免初次渲染时容器尺寸尚未稳定
+            map.resize();
+
             // 强制设置地图显示范围（使用config.json中的bounds）
             // bounds格式: [minLng, minLat, maxLng, maxLat]
             const mapBounds = new AMap.Bounds([bounds[0], bounds[1]], [bounds[2], bounds[3]]);
-            map.setBounds(mapBounds, false, [0, 0, 0, 0]);
+            map.setBounds(mapBounds, false, [50, 50, 50, 50]);
 
             // 示例POI数据（坐标点和名称）
             const pois = [
@@ -272,6 +280,7 @@
             // 5. 地图范围已由config.json中的bounds强制设定
             // 不再根据POI自动调整视野，确保始终显示config.json定义的精确范围
             console.log('地图显示范围已固定为config.json配置的范围');
+            window.map_ready = true;
 
             console.log(`地图已加载，共绘制${regions.length}个区域，${pois.length}个POI点，${taskPois.length}个任务点`);
             console.log('区域详情：', regions);
