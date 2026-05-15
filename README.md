@@ -1,68 +1,68 @@
 # car_tool
 
-绠€浣撲腑鏂囪鏄庯紝English summary below.
+简体中文说明，English summary below.
 
-## 椤圭洰绠€浠?
-`car_tool` 鏄竴涓潰鍚戞竻娲佸皬杞︿换鍔′笅鍙戠殑杈呭姪鎶€鑳斤紝鏍稿績鐩爣鏄妸鐢ㄦ埛鐨勮嚜鐒惰瑷€娓呮壂闇€姹傝浆鎹负鍙墽琛屻€佸彲瑙嗗寲銆佸彲杩借釜鐨勫尯鍩熶换鍔°€?
+## 项目简介
+`car_tool` 是一个面向清洁小车任务下发的辅助技能，核心目标是把用户的自然语言清扫需求转换为可执行、可视化、可追踪的区域任务。
 
-杩欎釜椤圭洰涓昏瑙ｅ喅涓夌被闂锛?
-- 浠?39 涓瀹氫箟鍙竻鎵尯鍩熶腑蹇€熺‘瀹氱洰鏍囧尯鍩?
-- 缁撳悎 POI 鎼滅储銆佸湴鍥炬埅鍥惧拰鍖哄煙鍖归厤锛岃緟鍔╁垽鏂湴鐐瑰簲钀藉湪鍝釜鍖哄煙
-- 鐢熸垚鏍囧噯鍖栦换鍔″弬鏁颁笌浜や簰寮忓湴鍥剧粨鏋滐紝鏂逛究浜哄伐纭鍜屽悗缁嚜鍔ㄥ寲澶勭悊
+这个项目主要解决三类问题：
+- 从 39 个预定义可清扫区域中快速确定目标区域
+- 结合 POI 搜索、地图截图和区域匹配，辅助判断地点应落在哪个区域
+- 生成标准化任务参数与交互式地图结果，方便人工确认和后续自动化处理
 
-鎹㈠彞璇濊锛屽畠涓嶆槸涓€涓崟绾殑鈥滄煡鍦板浘鈥濆伐鍏凤紝鑰屾槸涓€濂楀洿缁曟竻娲佷换鍔¤鍒掋€佸尯鍩熺‘璁ゅ拰缁撴灉灞曠ず鐨勫伐浣滄祦銆?
+换句话说，它不是一个单纯的“查地图”工具，而是一套围绕清洁任务规划、区域确认和结果展示的工作流。
 
-## 閫傜敤鍦烘櫙
-- 鐢ㄦ埛鍙鈥滄竻鎵煇涓湴鐐归檮杩戔€濓紝闇€瑕佸厛鎶婂湴鐐规槧灏勫埌鍖哄煙缂栧彿
-- 鐢ㄦ埛缁欏嚭澶氫釜鍦扮偣锛岄渶瑕佸垽鏂槸杩炵画璺緞杩樻槸骞跺垪浠诲姟
-- 闇€瑕佺敓鎴愬甫 POI 鏍囪鐨勫湴鍥炬埅鍥撅紝杈呭姪瑙嗚纭
-- 闇€瑕佹妸鏈€缁堜换鍔＄粨鏋滀繚瀛樺埌鐙珛鐨?session 鐩綍涓紝渚夸簬杩借釜鍜屽鐢?
+## 适用场景
+- 用户只说“清扫某个地点附近”，需要先把地点映射到区域编号
+- 用户给出多个地点，需要判断是连续路径还是并列任务
+- 需要生成带 POI 标记的地图截图，辅助视觉确认
+- 需要把最终任务结果保存到独立的 session 目录中，便于追踪和复用
 
-## 鏍稿績鑳藉姏
-- 39 涓彲娓呮壂鍖哄煙鐨勪换鍔℃槧灏勪笌鍖哄煙閫夋嫨
-- POI 鎼滅储涓庡湴鐐瑰潗鏍囪幏鍙栵紝瑙?[scripts/poi_search.js](scripts/poi_search.js)
-- 鍦板浘鎴浘鐢熸垚锛岃 [scripts/map_screenshot.py](scripts/map_screenshot.py)
-- 鍖哄煙鍙鍖栦笌璺緞灞曠ず锛岃 [scripts/visualize_regions.py](scripts/visualize_regions.py)
-- 宸茬煡鍦版爣鏌ヨ涓庝换鍔′細璇濈鐞嗭紝瑙?[scripts/preset_scripts.py](scripts/preset_scripts.py) 鍜?[scripts/session_manager.py](scripts/session_manager.py)
+## 核心能力
+- 39 个可清扫区域的任务映射与区域选择
+- POI 搜索与地点坐标获取，见 [scripts/poi_search.js](scripts/poi_search.js)
+- 地图截图生成，见 [scripts/map_screenshot.py](scripts/map_screenshot.py)
+- 区域可视化与路径展示，见 [scripts/visualize_regions.py](scripts/visualize_regions.py)
+- 已知地标查询与任务会话管理，见 [scripts/preset_scripts.py](scripts/preset_scripts.py) 和 [scripts/session_manager.py](scripts/session_manager.py)
 
-## 宸ヤ綔娴佺▼
-1. 瑙ｆ瀽鐢ㄦ埛杈撳叆锛岃瘑鍒崟鐐广€佽矾寰勩€佸鐐规垨缁勫悎浠诲姟
-2. 浼樺厛鏌ヨ宸茬煡鍦版爣锛屽垽鏂槸鍚﹁兘鐩存帴鏄犲皠鍒板尯鍩熺紪鍙?
-3. 瀵规湭鐭ュ湴鏍囨墽琛?POI 鎼滅储锛岃幏鍙栧潗鏍囧苟鐢熸垚鍦板浘鎴浘
-4. 缁撳悎鍖哄煙杈圭晫銆佽瑙夌粨鏋滄垨璺濈瑙勫垯锛岀‘璁ゆ渶缁堟竻鎵尯鍩?
-5. 淇濆瓨浠诲姟鍙傛暟锛屽苟鐢熸垚鍙鍖栫粨鏋滅敤浜庢鏌ュ拰灞曠ず
+## 工作流程
+1. 解析用户输入，识别单点、路径、多点或组合任务
+2. 优先查询已知地标，判断是否能直接映射到区域编号
+3. 对未知地标执行 POI 搜索，获取坐标并生成地图截图
+4. 结合区域边界、视觉结果或距离规则，确认最终清扫区域
+5. 保存任务参数，并生成可视化结果用于检查和展示
 
-## 鐩綍璇存槑
-- [scripts/](scripts/)锛氭牳蹇冭剼鏈洰褰曪紝鍖呭惈 POI 鎼滅储銆佹埅鍥俱€佸彲瑙嗗寲鍜屼細璇濈鐞嗛€昏緫
-- [docs/](docs/)锛氫娇鐢ㄨ鏄庡拰琛ュ厖鏂囨。
-- [references/](references/)锛氬弬鑰冭祫鏂欏拰绠楁硶璇存槑
-- [evals/](evals/)锛氳瘎娴嬮厤缃?
-- [examples/](examples/)锛氱ず渚嬭皟鐢ㄦ柟寮?
+## 目录说明
+- [scripts/](scripts/)：核心脚本目录，包含 POI 搜索、截图、可视化和会话管理逻辑
+- [docs/](docs/)：使用说明和补充文档
+- [references/](references/)：参考资料和算法说明
+- [evals/](evals/)：评测配置
+- [examples/](examples/)：示例调用方式
 
-## 浣跨敤璇存槑
-### 1. 杩涘叆鑴氭湰鐩綍
+## 使用说明
+### 1. 进入脚本目录
 
 ```bash
 cd c:\Users\18325\.claude\skills\car-tool\scripts
 ```
 
-### 2. 鐢熸垚鍖哄煙鍙鍖?
+### 2. 生成区域可视化
 
 ```bash
 python visualize_regions.py 0 1 2 --no-open
 ```
 
-### 3. 鏌ヨ鍦版爣鎴栫敓鎴愪换鍔?
+### 3. 查询地标或生成任务
 
-鍏蜂綋璋冪敤鏂瑰紡浠?[docs/USAGE.md](docs/USAGE.md) 鍜屽悇鑴氭湰澶撮儴娉ㄩ噴涓哄噯銆備笉鍚屼换鍔＄被鍨嬩細璧颁笉鍚屽垎鏀紝閫氬父涓嶉渶瑕佹墜宸ユ嫾鎺ユ墍鏈変腑闂翠骇鐗┿€?
+具体调用方式以 [docs/USAGE.md](docs/USAGE.md) 和各脚本头部注释为准。不同任务类型会走不同分支，通常不需要手工拼接所有中间产物。
 
-## 閰嶇疆鏂囦欢
-- [scripts/config.json](scripts/config.json)锛氫换鍔′笅鍙戜笌杩愯閰嶇疆
-- [scripts/known_landmarks.json](scripts/known_landmarks.json)锛氬凡鐭ュ湴鏍囦笌鍖哄煙鏄犲皠
-- [scripts/rectangles.json](scripts/rectangles.json)锛氬尯鍩熻竟鐣屼笌甯冨眬鏁版嵁
+## 配置文件
+- [scripts/config.json](scripts/config.json)：任务下发与运行配置
+- [scripts/known_landmarks.json](scripts/known_landmarks.json)：已知地标与区域映射
+- [scripts/rectangles.json](scripts/rectangles.json)：区域边界与布局数据
 
-## GitHub 鍙戝竷
-濡傛灉闇€瑕佹妸褰撳墠浠撳簱鎺ㄩ€佸埌 GitHub锛屽彲浠ユ寜甯歌娴佺▼鎵ц锛?
+## GitHub 发布
+如果需要把当前仓库推送到 GitHub，可以按常规流程执行：
 
 ```bash
 git init
@@ -73,7 +73,7 @@ git remote add origin https://github.com/kuinooos/wuyuanbay-pathfinding-skill.gi
 git push -u origin main
 ```
 
-濡傛灉浠撳簱宸茬粡瀛樺湪杩滅锛屽彧闇€瑕佸湪鏈湴鎻愪氦鍚庢墽琛?`git push` 鍗冲彲銆?
+如果仓库已经存在远端，只需要在本地提交后执行 `git push` 即可。
 
 ## English Summary
-`car_tool` is a workflow-oriented skill for cleaning-task dispatch. It helps map natural-language cleaning requests to one of 39 predefined regions, uses POI search and map screenshots when a location is not already known, and produces task parameters plus visual output for review and execution.
+`car_tool` is a workflow-oriented skill for cleaning-task dispatch. It maps natural-language cleaning requests to one of 39 predefined regions, uses POI search and map screenshots when a location is not already known, and produces task parameters plus visual output for review and execution.
