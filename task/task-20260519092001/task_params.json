@@ -1,0 +1,28 @@
+{
+  "task_id": "task-20260519092001",
+  "user_prompt": "打扫海水浴场到cafe",
+  "task_type": "path_cleaning",
+  "tasks": [
+    {
+      "id": "20260519092001_session1",
+      "name": "海水浴场到cafe",
+      "regions": [
+        {
+          "id": 0,
+          "status": 1
+        }
+      ],
+      "color": "#00008B",
+      "selected_regions": [
+        0
+      ]
+    }
+  ],
+  "selected_regions": [
+    0
+  ],
+  "total_regions": 39,
+  "selected_count": 1,
+  "execution_confirmed": true,
+  "confirmed_at": "2026-05-19 09:21:03"
+}

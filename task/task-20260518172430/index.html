@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>海水浴场到cafe</title>
+    <style>
+        :root {
+            --primary: #1E3A5F;
+            --primary-light: #2563EB;
+            --primary-bg: rgba(30,58,95,0.06);
+            --success: #059669;
+            --success-bg: rgba(5,150,105,0.08);
+            --warning: #D97706;
+            --warning-bg: rgba(217,119,6,0.08);
+            --info: #3B82F6;
+            --info-bg: rgba(59,130,246,0.08);
+            --surface: #FFFFFF;
+            --surface-alt: #F8FAFC;
+            --border: #E2E8F0;
+            --border-light: #F0F2F5;
+            --bg: #F0F2F5;
+            --text: #111827;
+            --text-secondary: #4B5563;
+            --text-muted: #9CA3AF;
+            --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.04);
+            --radius: 8px;
+            --radius-sm: 6px;
+            --radius-lg: 12px;
+            --panel-w: 400px;
+            --transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+            --font: -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html,body { width:100%; height:100%; overflow:hidden; font-family:var(--font); background:var(--bg); color:var(--text); font-size:14px; -webkit-font-smoothing:antialiased; }
+
+        #app { display:flex; width:100%; height:100%; position:relative; }
+        #map-container { flex:1; height:100%; position:relative; min-width:0; }
+        #map-container::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--primary),var(--primary-light),#06B6D4,var(--primary-light),var(--primary)); z-index:50; pointer-events:none; }
+
+        #panel { width:var(--panel-w); min-width:var(--panel-w); height:100vh; background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; z-index:100; position:relative; box-shadow:-2px 0 16px rgba(0,0,0,0.04); }
+
+        /* ── Panel Header ── */
+        .panel-header { padding:18px 20px 14px; flex-shrink:0; border-bottom:1px solid var(--border-light); background:var(--surface); }
+        .panel-header .brand { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+        .panel-header .brand-icon { width:34px; height:34px; background:linear-gradient(135deg,var(--primary),var(--primary-light)); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#fff; flex-shrink:0; }
+        .panel-header .brand-text h2 { font-size:16px; font-weight:700; color:var(--text); letter-spacing:-0.2px; line-height:1.2; }
+        .panel-header .brand-text span { font-size:11px; color:var(--text-muted); font-weight:500; }
+        .search-box { position:relative; }
+        .search-box .search-icon { position:absolute; left:11px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--text-muted); pointer-events:none; }
+        .search-box input { width:100%; padding:9px 12px 9px 36px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:13px; background:var(--surface-alt); color:var(--text); outline:none; transition:var(--transition); font-family:var(--font); }
+        .search-box input:focus { border-color:var(--primary-light); background:#fff; box-shadow:0 0 0 3px rgba(37,99,235,0.08); }
+        .search-box input::placeholder { color:var(--text-muted); }
+
+        .panel-body { flex:1; overflow-y:auto; overflow-x:hidden; scroll-behavior:smooth; }
+        .panel-body::-webkit-scrollbar { width:4px; }
+        .panel-body::-webkit-scrollbar-track { background:transparent; }
+        .panel-body::-webkit-scrollbar-thumb { background:#CBD5E1; border-radius:4px; }
+        .panel-body::-webkit-scrollbar-thumb:hover { background:#94A3B8; }
+
+        /* ── Selection View ── */
+        #selection-view { display:flex; flex-direction:column; }
+        #selection-view.hidden { display:none; }
+
+        .task-legend { padding:10px 18px; border-bottom:1px solid var(--border-light); }
+        .legend-item { display:flex; align-items:center; gap:8px; padding:3px 0; font-size:13px; }
+        .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+        .legend-name { color:var(--text-secondary); font-weight:500; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .legend-badge { font-size:11px; color:var(--text-muted); background:var(--bg); padding:1px 8px; border-radius:10px; font-weight:500; }
+
+        .stats-bar { display:flex; align-items:center; justify-content:space-between; padding:10px 18px 6px; font-size:13px; color:var(--text-secondary); }
+        .stats-bar .count { font-weight:700; color:var(--primary-light); }
+        .stats-bar .total { color:var(--text-muted); }
+
+        .batch-actions { display:flex; gap:6px; padding:6px 18px 10px; border-bottom:1px solid var(--border-light); }
+        .batch-btn { flex:1; padding:6px 12px; border:1.5px solid var(--border); border-radius:var(--radius-sm); background:white; font-size:12px; font-weight:600; color:var(--text-secondary); cursor:pointer; transition:var(--transition); font-family:var(--font); }
+        .batch-btn:hover { border-color:var(--primary-light); color:var(--primary-light); background:var(--primary-bg); }
+
+        .task-section { margin:8px 14px; border-radius:var(--radius); overflow:hidden; border:1px solid var(--border); background:white; box-shadow:var(--shadow-xs); transition:var(--transition); }
+        .task-section.search-hidden { display:none; }
+        .task-header { display:flex; align-items:center; gap:8px; padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer; user-select:none; transition:var(--transition); }
+        .task-header:hover { background:var(--surface-alt); }
+        .task-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+        .task-name { flex:1; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .task-count { font-size:11px; color:var(--text-muted); font-weight:500; background:var(--bg); padding:1px 8px; border-radius:10px; white-space:nowrap; }
+        .task-body { padding:2px 12px 10px; display:flex; flex-wrap:wrap; gap:4px; }
+        .collapse-toggle { padding:6px 14px; cursor:pointer; font-size:12px; color:var(--text-muted); border-top:1px solid var(--border-light); display:flex; align-items:center; user-select:none; transition:var(--transition); }
+        .collapse-toggle:hover { color:var(--text-secondary); background:var(--surface-alt); }
+        .collapse-arrow { margin-right:5px; font-size:9px; }
+        .collapse-body { padding:2px 12px 12px; display:none; flex-wrap:wrap; gap:4px; }
+
+        .region-chip { display:inline-flex; align-items:center; gap:4px; padding:3px 8px 3px 5px; border-radius:5px; cursor:pointer; user-select:none; font-size:12px; transition:var(--transition); border:1px solid transparent; }
+        .region-chip.sel { background:#F0F7FF; border-color:rgba(37,99,235,0.12); }
+        .region-chip.unsel { background:var(--surface-alt); color:var(--text-muted); }
+        .region-chip.unsel:hover { background:#F0F1F3; color:var(--text-secondary); }
+        .region-chip.search-hidden { display:none; }
+        .region-chip .cb { width:15px; height:15px; border-radius:3px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; font-size:10px; line-height:1; transition:var(--transition); font-weight:700; }
+        .region-chip .cb.checked { background:var(--primary-light); color:white; }
+        .region-chip .cb.unchecked { background:white; border:1.5px solid #CBD5E1; color:transparent; }
+        .region-chip .cb.unchecked:hover { border-color:var(--primary-light); }
+        .region-chip .cl { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+        .region-chip .lbl { font-size:12px; }
+        .region-chip .lbl.sel { font-weight:600; color:var(--text); }
+        .region-chip .lbl.unsel { color:var(--text-muted); }
+
+        .region-item { display:flex; align-items:center; gap:10px; padding:10px 12px; margin:4px 14px; background:white; border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; transition:var(--transition); box-shadow:var(--shadow-xs); }
+        .region-item:hover { border-color:var(--primary-light); box-shadow:0 0 0 2px var(--primary-bg); }
+        .region-item.dimmed { opacity:0.55; }
+        .region-item.dimmed:hover { opacity:0.8; }
+        .region-item.search-hidden { display:none; }
+        .region-checkbox { width:20px; height:20px; border-radius:4px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:var(--transition); font-size:12px; font-weight:700; }
+        .region-checkbox.checked { background:var(--primary-light); color:white; }
+        .region-checkbox.unchecked { background:white; border:2px solid #CBD5E1; color:transparent; }
+        .region-checkbox.unchecked:hover { border-color:var(--primary-light); }
+        .region-item .info { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+        .region-item .color-bar { width:4px; border-radius:2px; flex-shrink:0; align-self:stretch; }
+        .region-name { font-weight:600; font-size:13px; color:var(--text); }
+        .region-coords { font-size:11px; color:var(--text-muted); font-family:'SF Mono','Consolas',monospace; }
+
+        /* ── Dashboard View ── */
+        #dashboard-view { display:none; flex-direction:column; }
+        #dashboard-view.active { display:flex; }
+
+        .dash-header { padding:14px 18px 6px; display:flex; align-items:center; justify-content:space-between; }
+        .dash-header .dash-title { font-size:15px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:8px; }
+        .dash-header .dash-status-dot { width:8px; height:8px; border-radius:50%; background:var(--success); animation:pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        .dash-back-btn { font-size:12px; font-weight:600; color:var(--text-muted); cursor:pointer; border:none; background:var(--surface-alt); padding:5px 12px; border-radius:var(--radius-sm); transition:var(--transition); font-family:var(--font); }
+        .dash-back-btn:hover { color:var(--primary-light); background:var(--primary-bg); }
+
+        .dash-summary { display:flex; gap:8px; padding:10px 18px 6px; }
+        .dash-stat { flex:1; background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--radius); padding:12px 10px; text-align:center; transition:var(--transition); }
+        .dash-stat .stat-num { font-size:26px; font-weight:800; letter-spacing:-0.5px; line-height:1; }
+        .dash-stat .stat-label { font-size:11px; color:var(--text-muted); margin-top:4px; font-weight:500; }
+        .dash-stat.pending .stat-num { color:var(--warning); }
+        .dash-stat.cleaning .stat-num { color:var(--info); }
+        .dash-stat.cleaned .stat-num { color:var(--success); }
+
+        .dash-progress-wrap { padding:4px 18px 10px; }
+        .dash-progress-bar { height:8px; background:var(--bg); border-radius:4px; overflow:hidden; display:flex; }
+        .dash-progress-bar .seg { height:100%; transition:width 0.5s ease; }
+        .dash-progress-bar .seg.cleaned { background:var(--success); }
+        .dash-progress-bar .seg.cleaning { background:var(--info); }
+        .dash-progress-bar .seg.pending { background:#E5E7EB; }
+        .dash-progress-label { display:flex; justify-content:space-between; margin-top:4px; font-size:11px; color:var(--text-muted); }
+
+        .dash-tasks { padding:4px 18px 14px; display:flex; flex-direction:column; gap:10px; }
+        .dash-task-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-xs); }
+        .dash-task-header { display:flex; align-items:center; gap:8px; padding:10px 14px; background:var(--surface-alt); border-bottom:1px solid var(--border-light); }
+        .dash-task-header .tcolor { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+        .dash-task-header .tname { flex:1; font-size:13px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .dash-task-header .tstats { font-size:11px; color:var(--text-muted); white-space:nowrap; }
+        .dash-region-grid { display:grid; grid-template-columns:1fr; gap:3px; padding:8px 10px; }
+        .status-chip { display:flex; align-items:center; gap:6px; padding:7px 8px; border-radius:var(--radius-sm); font-size:12px; transition:var(--transition); cursor:pointer; border:1px solid transparent; }
+        .status-chip:hover { border-color:var(--border); background:var(--surface-alt); }
+        .status-chip .sd { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+        .status-chip .sid { font-weight:700; color:var(--text); min-width:18px; }
+        .status-chip .stxt { color:var(--text-secondary); flex:1; }
+        .status-chip.s1 { background:#FFFBEB; border-color:#FDE68A; }
+        .status-chip.s1 .sd { background:var(--warning); }
+        .status-chip.s1 .stxt { color:#92400E; }
+        .status-chip.s2 { background:#EFF6FF; border-color:#BFDBFE; }
+        .status-chip.s2 .sd { background:var(--info); }
+        .status-chip.s3 { background:#ECFDF5; border-color:#A7F3D0; }
+        .status-chip.s3 .sd { background:var(--success); }
+        .status-chip.s3 .stxt { color:#065F46; }
+
+        .dash-empty { text-align:center; padding:32px 16px; color:var(--text-muted); font-size:13px; }
+
+        /* ── Panel Footer ── */
+        .panel-footer { padding:14px 20px 18px; flex-shrink:0; border-top:1px solid var(--border-light); background:var(--surface-alt); }
+        .exec-btn { display:block; width:100%; padding:11px; border:none; border-radius:var(--radius); font-size:15px; font-weight:700; cursor:pointer; transition:var(--transition); color:white; letter-spacing:0.3px; font-family:var(--font); }
+        .exec-btn.ready { background:linear-gradient(135deg,var(--primary),#2563EB); box-shadow:0 4px 14px rgba(30,58,95,0.3); }
+        .exec-btn.ready:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(30,58,95,0.4); }
+        .exec-btn.ready:active { transform:translateY(0); }
+        .exec-btn.confirming { background:linear-gradient(135deg,#D97706,#B45309); cursor:wait; }
+        .exec-btn.confirmed { background:linear-gradient(135deg,#059669,#047857); cursor:default; }
+        .exec-btn.error { background:linear-gradient(135deg,#DC2626,#B91C1C); cursor:pointer; }
+        .exec-status { text-align:center; margin-top:10px; font-size:13px; min-height:20px; font-weight:500; }
+
+        /* ── Modal ── */
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,0.5); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center; }
+        .modal-overlay.open { display:flex; }
+        .modal { background:white; border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:440px; max-width:90vw; overflow:hidden; animation:modalIn 0.2s ease; }
+        .modal-header { padding:20px 24px 0; font-size:17px; font-weight:700; color:var(--text); }
+        .modal-body { padding:16px 24px; max-height:50vh; overflow-y:auto; }
+        .modal-task { display:flex; align-items:center; gap:10px; padding:8px 12px; margin-bottom:6px; background:var(--surface-alt); border-radius:var(--radius-sm); }
+        .modal-task .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+        .modal-task .name { flex:1; font-size:13px; font-weight:500; }
+        .modal-task .detail { font-size:12px; color:var(--text-muted); }
+        .modal-footer { padding:12px 24px 20px; display:flex; gap:10px; justify-content:flex-end; }
+        .modal-btn { padding:8px 20px; border-radius:var(--radius-sm); font-size:14px; font-weight:600; cursor:pointer; transition:var(--transition); border:none; font-family:var(--font); }
+        .modal-btn.cancel { background:var(--bg); color:var(--text-secondary); }
+        .modal-btn.cancel:hover { background:#E2E8F0; }
+        .modal-btn.confirm { background:var(--primary-light); color:white; }
+        .modal-btn.confirm:hover { background:#1D4ED8; }
+
+        .no-result { text-align:center; padding:32px 16px; color:var(--text-muted); font-size:13px; }
+
+        @keyframes modalIn { from { opacity:0; transform:scale(0.95) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }
+
+        @media (max-width:768px) { #panel { width:100%; min-width:100%; height:45vh; border-left:none; border-top:1px solid var(--border); } #app { flex-direction:column-reverse; } #map-container { height:55vh; } }
+        @media (max-width:480px) { #panel { height:50vh; } #map-container { height:50vh; } .modal { width:95vw; } .dash-region-grid { grid-template-columns:1fr 1fr; } }
+    </style>
+</head>
+<body>
+    <!-- visualize_regions_generated_page -->
+    <div id="app">
+        <div id="map-container"></div>
+        <div id="panel">
+            <div class="panel-header">
+                <div class="brand">
+                    <div class="brand-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                    </div>
+                    <div class="brand-text">
+                        <h2>清扫区域管理</h2>
+                        <span>Cleaning Region Manager</span>
+                    </div>
+                </div>
+                <div class="search-box" id="search-box">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    <input type="text" id="search-input" placeholder="搜索区域编号或路段..." oninput="filterRegions(this.value)">
+                </div>
+                <div id="watch-path-line" style="font-size:11px;color:var(--text-muted);padding-top:6px;margin-top:6px;border-top:1px solid var(--border-light);display:flex;align-items:center;gap:4px;">
+                    <span style="background:var(--success);width:6px;height:6px;border-radius:50%;display:inline-block;"></span>
+                    监听: <span id="watch-path-text">-</span>
+                </div>
+            </div>
+            <div class="panel-body">
+                <!-- Selection Mode -->
+                <div id="selection-view">
+                    <div class="task-legend" id="task-legend"></div>
+                    <div class="stats-bar">
+                        <span>已选 <strong class="count" id="selected-count">0</strong></span>
+                        <span class="total">共 <span id="total-count">39</span> 个区域</span>
+                    </div>
+                    <div class="batch-actions">
+                        <button class="batch-btn" onclick="selectAllVisible()">全选可见</button>
+                        <button class="batch-btn" onclick="deselectAllVisible()">取消可见</button>
+                    </div>
+                    <div id="region-list"></div>
+                </div>
+
+                <!-- Dashboard Mode (post-confirmation) -->
+                <div id="dashboard-view">
+                    <div class="dash-header">
+                        <div class="dash-title">
+                            <span class="dash-status-dot"></span> 任务执行看板
+                        </div>
+                        <button class="dash-back-btn" onclick="resetConfirm()">← 返回选择</button>
+                    </div>
+                    <div class="dash-summary" id="dash-summary">
+                        <div class="dash-stat pending">
+                            <div class="stat-num" id="stat-pending">0</div>
+                            <div class="stat-label">待清理</div>
+                        </div>
+                        <div class="dash-stat cleaning">
+                            <div class="stat-num" id="stat-cleaning">0</div>
+                            <div class="stat-label">清理中</div>
+                        </div>
+                        <div class="dash-stat cleaned">
+                            <div class="stat-num" id="stat-cleaned">0</div>
+                            <div class="stat-label">已清理</div>
+                        </div>
+                    </div>
+                    <div class="dash-progress-wrap">
+                        <div class="dash-progress-bar" id="dash-progress-bar">
+                            <span class="seg cleaned" style="width:0%"></span>
+                            <span class="seg cleaning" style="width:0%"></span>
+                            <span class="seg pending" style="width:0%"></span>
+                        </div>
+                        <div class="dash-progress-label">
+                            <span id="dash-progress-pct">0%</span>
+                            <span id="dash-progress-total">共 0 个区域</span>
+                        </div>
+                    </div>
+                    <div class="dash-tasks" id="dash-tasks"></div>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <button id="exec-btn" class="exec-btn ready" onclick="showConfirmModal()">确认下发</button>
+                <div id="exec-status" class="exec-status"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="modal-overlay" onclick="if(event.target===this)hideConfirmModal()">
+        <div class="modal">
+            <div class="modal-header">确认执行清扫任务</div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel" onclick="hideConfirmModal()">取消</button>
+                <button class="modal-btn confirm" onclick="confirmExecution()">确认执行</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.__errors = [];
+        window.onerror = function(m,s,l,c,e){ window.__errors.push({message:m,source:s,lineno:l,colno:c,stack:e&&e.stack}); };
+        (function(){ var oe=console.error; console.error=function(){ window.__errors.push({args:Array.from(arguments)}); oe.apply(console,arguments); }; })();
+    </script>
+    <script src="https://webapi.amap.com/maps?v=2.0&key=ff74f328ab12ebcae370a2f3780a5fbb"></script>
+    <script>
+        const regionsData = [{"id": 0, "center": [118.1733825, 24.519976999999997], "boundary": [[118.17354256320553, 24.52018132576987], [118.17345343679446, 24.52022667423013], [118.17322243679446, 24.51977267423013], [118.17331156320553, 24.519727325769868]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_1", "selected": false}, {"id": 1, "center": [118.173053, 24.5194555], "boundary": [[118.17330744867957, 24.519720607750667], [118.17322655132043, 24.51977939224933], [118.17279855132043, 24.51919039224933], [118.17287944867957, 24.51913160775067]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_2", "selected": false}, {"id": 2, "center": [118.17268, 24.518983], "boundary": [[118.17287628944811, 24.51912769088624], [118.17280171055188, 24.51919430911376], [118.17248371055189, 24.51883830911376], [118.17255828944812, 24.51877169088624]], "color": "#00008B", "task": "海水浴场到cafe", "is_task_default": true, "name": "region_3", "selected": true}, {"id": 3, "center": [118.1723355, 24.5186255], "boundary": [[118.17255576945803, 24.518769068331675], [118.17248623054198, 24.518840931668326], [118.17211523054198, 24.518481931668326], [118.17218476945803, 24.518410068331676]], "color": "#00008B", "task": "海水浴场到cafe", "is_task_default": true, "name": "region_4", "selected": true}, {"id": 4, "center": [118.17190049999999, 24.5182585], "boundary": [[118.17218003843534, 24.518406028855377], [118.17211996156466, 24.518485971144624], [118.17162096156466, 24.518110971144623], [118.17168103843534, 24.518031028855376]], "color": "#00008B", "task": "海水浴场到cafe", "is_task_default": true, "name": "region_5", "selected": true}, {"id": 5, "center": [118.1714, 24.5179205], "boundary": [[118.17167671222451, 24.518028117818258], [118.17162528777548, 24.51811388218174], [118.17112328777549, 24.51781288218174], [118.17117471222451, 24.517727117818257]], "color": "#00008B", "task": "海水浴场到cafe", "is_task_default": true, "name": "region_6", "selected": true}, {"id": 6, "center": [118.170925, 24.517645], "boundary": [[118.1711733648516, 24.51772633818594], [118.1711246351484, 24.517813661814056], [118.1706766351484, 24.51756366181406], [118.17072536485159, 24.517476338185944]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_7", "selected": false}, {"id": 7, "center": [118.1705465, 24.517447500000003], "boundary": [[118.1707222404572, 24.517474735853284], [118.1706797595428, 24.517565264146718], [118.1703707595428, 24.51742026414672], [118.17041324045721, 24.517329735853284]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_8", "selected": false}, {"id": 8, "center": [118.17016050000001, 24.517287000000003], "boundary": [[118.17040976618036, 24.517328262832393], [118.17037423381966, 24.51742173716761], [118.16991123381965, 24.51724573716761], [118.16994676618035, 24.517152262832393]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_9", "selected": false}, {"id": 9, "center": [118.169659, 24.51713], "boundary": [[118.16994137991337, 24.517150556860706], [118.16991662008662, 24.517247443139297], [118.16937662008662, 24.517109443139297], [118.16940137991337, 24.517012556860706]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_10", "selected": false}, {"id": 10, "center": [118.1690665, 24.516994500000003], "boundary": [[118.16939909764096, 24.517012030237424], [118.16937890235903, 24.51710996976258], [118.16873390235904, 24.516976969762577], [118.16875409764097, 24.516879030237423]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_11", "selected": false}, {"id": 11, "center": [118.1684845, 24.516915], "boundary": [[118.16874650167976, 24.516878062623235], [118.16874149832024, 24.516977937376765], [118.16822249832025, 24.516951937376767], [118.16822750167977, 24.516852062623236]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_12", "selected": false}, {"id": 12, "center": [118.16804350000001, 24.516868000000002], "boundary": [[118.16823420625238, 24.516852854858662], [118.16821579374763, 24.51695114514134], [118.16785279374763, 24.51688314514134], [118.16787120625237, 24.51678485485866]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_13", "selected": false}, {"id": 13, "center": [118.167764, 24.5167805], "boundary": [[118.16788595829291, 24.516790113781198], [118.16783804170709, 24.5168778862188], [118.16764204170708, 24.5167708862188], [118.16768995829291, 24.5166831137812]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_14", "selected": false}, {"id": 14, "center": [118.167528, 24.516619], "boundary": [[118.16769681541308, 24.51668762474995], [118.16763518458691, 24.51676637525005], [118.16735918458691, 24.516550375250052], [118.16742081541308, 24.51647162474995]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_15", "selected": false}, {"id": 15, "center": [118.167307, 24.5165], "boundary": [[118.16739656906684, 24.51646143340479], [118.16738343093316, 24.516560566595214], [118.16721743093316, 24.516538566595212], [118.16723056906685, 24.516439433404788]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_16", "selected": false}, {"id": 16, "center": [118.1670065, 24.516531999999998], "boundary": [[118.1672143026403, 24.516439949401484], [118.1672336973597, 24.516538050598516], [118.1667986973597, 24.516624050598516], [118.1667793026403, 24.516525949401483]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_17", "selected": false}, {"id": 17, "center": [118.16673349999999, 24.5165765], "boundary": [[118.16678764914192, 24.516525018251507], [118.16679035085807, 24.516624981748492], [118.16667935085808, 24.516627981748492], [118.16667664914193, 24.516528018251506]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_18", "selected": false}, {"id": 18, "center": [118.16633150000001, 24.5164035], "boundary": [[118.1667004894664, 24.516533343265884], [118.16665551053362, 24.516622656734114], [118.16596251053362, 24.516273656734114], [118.1660074894664, 24.516184343265884]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_19", "selected": false}, {"id": 19, "center": [118.16577000000001, 24.516018], "boundary": [[118.16602002182022, 24.516193314259024], [118.1659499781798, 24.516264685740975], [118.16551997817979, 24.515842685740974], [118.16559002182021, 24.515771314259023]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_20", "selected": false}, {"id": 20, "center": [118.165398, 24.5155535], "boundary": [[118.16559750789607, 24.51578067361072], [118.16551249210393, 24.515833326389277], [118.16519849210393, 24.515326326389278], [118.16528350789606, 24.51527367361072]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_21", "selected": false}, {"id": 21, "center": [118.16510650000001, 24.514951], "boundary": [[118.16528765521078, 24.515282019696706], [118.16519434478921, 24.515317980303294], [118.16492534478922, 24.514619980303294], [118.16501865521079, 24.514584019696706]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_22", "selected": false}, {"id": 22, "center": [118.16492550000001, 24.51436], "boundary": [[118.165021101769, 24.514592565155958], [118.16492289823101, 24.514611434844042], [118.164829898231, 24.514127434844042], [118.164928101769, 24.514108565155958]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_23", "selected": false}, {"id": 23, "center": [118.16490999999999, 24.5138265], "boundary": [[118.16492871963649, 24.514123287508514], [118.1648292803635, 24.514112712491485], [118.1648912803635, 24.513529712491486], [118.16499071963649, 24.513540287508516]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_24", "selected": false}, {"id": 24, "center": [118.16510249999999, 24.5132535], "boundary": [[118.16498436942862, 24.513559881572725], [118.16489763057137, 24.513510118427277], [118.16522063057137, 24.512947118427277], [118.16530736942862, 24.512996881572725]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_25", "selected": false}, {"id": 25, "center": [118.16551949999999, 24.512775], "boundary": [[118.16529453045598, 24.513011596606635], [118.165233469544, 24.512932403393368], [118.16574446954401, 24.512538403393368], [118.16580553045598, 24.512617596606635]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_26", "selected": false}, {"id": 26, "center": [118.16617600000001, 24.5125035], "boundary": [[118.16578413299548, 24.512627158807895], [118.16576586700451, 24.512528841192108], [118.16656786700452, 24.512379841192107], [118.16658613299549, 24.512478158807895]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_27", "selected": false}, {"id": 27, "center": [118.167107, 24.512565000000002], "boundary": [[118.16656457243865, 24.512477430937622], [118.16658942756136, 24.51238056906238], [118.16764942756136, 24.51265256906238], [118.16762457243864, 24.51274943093762]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_28", "selected": false}, {"id": 28, "center": [118.16870349999999, 24.513303999999998], "boundary": [[118.16761239108594, 24.512744524721125], [118.16766160891406, 24.512657475278875], [118.16979460891406, 24.513863475278875], [118.16974539108594, 24.513950524721125]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_29", "selected": false}, {"id": 29, "center": [118.17054949999999, 24.514161], "boundary": [[118.16975450915668, 24.513954539812502], [118.16978549084332, 24.513859460187497], [118.17134449084332, 24.514367460187497], [118.17131350915668, 24.514462539812502]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_30", "selected": false}, {"id": 30, "center": [118.17175449999999, 24.514889500000002], "boundary": [[118.17129177488961, 24.514448380999934], [118.17136622511039, 24.514381619000066], [118.17221722511039, 24.515330619000068], [118.17214277488961, 24.515397380999936]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_31", "selected": false}, {"id": 31, "center": [118.17235149999999, 24.5157725], "boundary": [[118.17213389807475, 24.515383354908643], [118.17222610192525, 24.51534464509136], [118.17256910192525, 24.51616164509136], [118.17247689807475, 24.51620035490864]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_32", "selected": false}, {"id": 32, "center": [118.1729105, 24.516419], "boundary": [[118.17249683194574, 24.516223605550532], [118.17254916805426, 24.516138394449467], [118.17332416805426, 24.516614394449466], [118.17327183194574, 24.51669960555053]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_33", "selected": false}, {"id": 33, "center": [118.173978, 24.5167735], "boundary": [[118.17328955683818, 24.516706281974578], [118.17330644316182, 24.51660771802542], [118.17466644316181, 24.51684071802542], [118.17464955683818, 24.51693928197458]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_34", "selected": false}, {"id": 34, "center": [118.17486099999999, 24.5169895], "boundary": [[118.17463599388738, 24.516934896893073], [118.17468000611261, 24.516845103106927], [118.17508600611262, 24.517044103106926], [118.17504199388739, 24.51713389689307]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_35", "selected": false}, {"id": 35, "center": [118.17527150000001, 24.5173885], "boundary": [[118.1750229002733, 24.517117474768916], [118.17510509972671, 24.51706052523108], [118.1755200997267, 24.517659525231082], [118.1754379002733, 24.517716474768918]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_36", "selected": false}, {"id": 36, "center": [118.1756765, 24.518448], "boundary": [[118.17543060732432, 24.51770057572822], [118.17552739267568, 24.51767542427178], [118.17592239267567, 24.51919542427178], [118.17582560732431, 24.51922057572822]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_37", "selected": false}, {"id": 37, "center": [118.16868, 24.515491], "boundary": [[118.16768, 24.516689], [118.167864, 24.516794], [118.169893, 24.514001], [118.169715, 24.513896]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_38", "selected": false}, {"id": 38, "center": [118.17185, 24.516957], "boundary": [[118.171136, 24.517746], [118.171166, 24.517763], [118.172519, 24.516208], [118.172499, 24.51618]], "color": "#CCCCCC", "task": "", "is_task_default": false, "name": "region_39", "selected": false}];
+        const taskGroupsData = [{"id": "20260518172430_session1", "name": "海水浴场到cafe", "regions": [2, 3, 4, 5], "color": "#00008B", "selected_regions": [2, 3, 4, 5], "region_statuses": {"2": 1, "3": 1, "4": 1, "5": 1}}];
+        const SESSION_PATH = '';
+        const DEFAULT_TASK_COLOR = '#1E3A5F';
+        const USER_SELECTED_COLOR = '#60A5FA';
+
+        const STATUS_MAP = {1:'待清理', 2:'清理中', 3:'已清理'};
+        const STATUS_CSSCLASS = {1:'s1', 2:'s2', 3:'s3'};
+        const STATUS_COLORS = {1:'#D97706', 2:'#3B82F6', 3:'#059669'};
+        let dashboardMode = false;
+
+        const map = new AMap.Map("map-container", { zoom:14, center:[118.170645,24.51649], resizeEnable:true, mapStyle:"amap://styles/light" });
+        const polygons = [], markers = [];
+        const vehicleOverlay = { marker: null, vehicle: null };
+
+        function buildVehicleMarker(vehicle) {
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:relative;width:0;height:0;';
+
+            const dot = document.createElement('div');
+            dot.style.cssText = 'position:absolute;width:16px;height:16px;background:#2563EB;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35);left:-8px;top:-8px;z-index:1000;';
+
+            const label = document.createElement('div');
+            label.style.cssText = 'position:absolute;top:18px;left:50%;transform:translateX(-50%);padding:3px 6px;background:rgba(37,99,235,0.92);color:white;border-radius:4px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.25);pointer-events:none;z-index:1001;';
+            label.innerText = vehicle.label || vehicle.plateId || vehicle.devId || '小车';
+
+            wrapper.appendChild(dot);
+            wrapper.appendChild(label);
+            return wrapper;
+        }
+
+        function updateVehicleOverlay(snapshot) {
+            const vehicle = snapshot && snapshot.ok ? snapshot.vehicle : null;
+            if (!vehicle || !Array.isArray(vehicle.position)) {
+                if (vehicleOverlay.marker) {
+                    map.remove(vehicleOverlay.marker);
+                    vehicleOverlay.marker = null;
+                    vehicleOverlay.vehicle = null;
+                }
+                return;
+            }
+
+            vehicleOverlay.vehicle = vehicle;
+            if (!vehicleOverlay.marker) {
+                vehicleOverlay.marker = new AMap.Marker({
+                    position: vehicle.position,
+                    offset: new AMap.Pixel(-8, -8),
+                    zIndex: 1000,
+                    bubble: true,
+                });
+                vehicleOverlay.marker.setContent(buildVehicleMarker(vehicle));
+                vehicleOverlay.marker.on('click', function() {
+                    new AMap.InfoWindow({
+                        content:`<div style="padding:8px 10px;min-width:200px;"><div style="font-weight:700;font-size:15px;color:#2563EB;margin-bottom:6px;">${vehicle.label || vehicle.plateId || vehicle.devId || '小车'}</div><div style="font-size:12px;color:#666;line-height:1.8;">状态: ${vehicle.status || '-'}<br/>作业状态: ${vehicle.operationalStatus || '-'}<br/>位置: ${vehicle.lon.toFixed(6)}, ${vehicle.lat.toFixed(6)}<br/>更新时间: ${snapshot.updated_at || '-'}</div></div>`,
+                        offset:new AMap.Pixel(0,-35)
+                    }).open(map, vehicle.position);
+                });
+                map.add(vehicleOverlay.marker);
+            } else {
+                vehicleOverlay.marker.setPosition(vehicle.position);
+                vehicleOverlay.marker.setContent(buildVehicleMarker(vehicle));
+            }
+        }
+
+        function pollVehicleInfo() {
+            fetch('/api/vehicle').then(r => r.json()).then(updateVehicleOverlay).catch(function() {});
+        }
+
+        function initMap() {
+            let minLng=Infinity, minLat=Infinity, maxLng=-Infinity, maxLat=-Infinity;
+            regionsData.forEach(region => {
+                region.boundary.forEach(p => {
+                    minLng=Math.min(minLng,p[0]); minLat=Math.min(minLat,p[1]);
+                    maxLng=Math.max(maxLng,p[0]); maxLat=Math.max(maxLat,p[1]);
+                });
+                const fillCol = region.selected ? region.color : '#CCCCCC';
+                const strokeCol = region.selected ? region.color : '#999999';
+                const polygon = new AMap.Polygon({
+                    path:region.boundary, strokeColor:strokeCol, strokeWeight:2, strokeOpacity:0.9,
+                    fillColor:fillCol, fillOpacity:region.selected?0.22:0.1
+                });
+                polygon.on('mouseover', () => polygon.setOptions({ fillOpacity:region.selected?0.38:0.22, strokeWeight:3 }));
+                polygon.on('mouseout', () => polygon.setOptions({ fillOpacity:region.selected?0.22:0.1, strokeWeight:2 }));
+                polygon.on('click', () => { if(!dashboardMode) toggleRegion(region.id); });
+                map.add(polygon);
+                polygons.push(polygon);
+
+                const marker = new AMap.Marker({ position:region.center, offset:new AMap.Pixel(-15,-15), zIndex:100 });
+                const el = document.createElement("div");
+                el.style.cssText = `width:30px;height:30px;line-height:30px;border-radius:50%;text-align:center;font-weight:700;font-size:13px;cursor:pointer;transition:all 0.15s ease;
+                    background:${region.selected?region.color:'#D1D5DB'};color:${region.selected?'white':'#9CA3AF'};
+                    box-shadow:${region.selected?'0 2px 8px rgba(0,0,0,0.3)':'0 1px 4px rgba(0,0,0,0.15)'};
+                    border:2.5px solid ${region.selected?'white':'#E5E7EB'};`;
+                el.textContent = region.id+1;
+                el.addEventListener('mouseenter',() => hoverRegion(region.id));
+                el.addEventListener('mouseleave',() => unhoverRegion(region.id));
+                el.addEventListener('click',(e) => { e.stopPropagation(); if(!dashboardMode) showRegionInfo(region); });
+                marker.setContent(el);
+                map.add(marker);
+                markers.push({id:region.id, marker, el});
+            });
+            map.setBounds(new AMap.Bounds([minLng,minLat],[maxLng,maxLat]), false, [50,50,50,50]);
+            updateStats();
+            fillInfoPanel();
+            pollVehicleInfo();
+        }
+
+        function updateMarker(regionId) {
+            const region = regionsData.find(r => r.id===regionId);
+            if(!region) return;
+            const mk = markers.find(m => m.id===regionId);
+            if(!mk||!mk.el) return;
+            const sel = region.selected||region._selected;
+            const col = dashboardMode && region._pollStatus ? (STATUS_COLORS[region._pollStatus]||region.color) : region.color;
+            mk.el.style.cssText = `width:30px;height:30px;line-height:30px;border-radius:50%;text-align:center;font-weight:700;font-size:13px;cursor:pointer;transition:all 0.15s ease;
+                background:${sel?col:'#D1D5DB'};color:${sel?'white':'#9CA3AF'};
+                box-shadow:${sel?'0 2px 8px rgba(0,0,0,0.3)':'0 1px 4px rgba(0,0,0,0.15)'};
+                border:2.5px solid ${sel?'white':'#E5E7EB'};`;
+            const poly = polygons[regionId];
+            if(poly) poly.setOptions({
+                fillColor: sel ? col : '#CCCCCC',
+                strokeColor: sel ? col : '#999999',
+                fillOpacity: sel ? 0.22 : 0.1
+            });
+        }
+
+        function hoverRegion(regionId) {
+            const poly = polygons[regionId];
+            if(poly) poly.setOptions({ fillOpacity:0.38, strokeWeight:3 });
+            const el = document.getElementById('region-item-'+regionId);
+            if(el) el.style.background = '#F0F7FF';
+        }
+
+        function unhoverRegion(regionId) {
+            const region = regionsData.find(r => r.id===regionId);
+            const poly = polygons[regionId];
+            if(poly) poly.setOptions({ fillOpacity:(region&&(region.selected||region._selected))?0.22:0.1, strokeWeight:2 });
+            const el = document.getElementById('region-item-'+regionId);
+            if(el) el.style.background = '';
+        }
+
+        function showRegionInfo(region) {
+            const status = region._pollStatus ? STATUS_MAP[region._pollStatus] : (region.selected||region._selected?'已选中':'未选中');
+            new AMap.InfoWindow({
+                content:`<div style="padding:8px 10px;min-width:180px;"><div style="font-weight:700;font-size:15px;color:${region.color};margin-bottom:6px;">区域${region.id+1}</div><div style="font-size:12px;color:#666;line-height:1.8;">中心: ${region.center[0].toFixed(6)}, ${region.center[1].toFixed(6)}<br/>边界点数: ${region.boundary.length}<br/>状态: ${status}</div></div>`,
+                offset:new AMap.Pixel(0,-35)
+            }).open(map, region.center);
+        }
+
+        function fitViewToRegion(regionId) {
+            const region = regionsData.find(r => r.id===regionId);
+            if(!region) return;
+            map.setCenter(region.center);
+            map.setZoom(16, true, 300);
+        }
+
+        function filterRegions(query) {
+            query = (query||'').trim().toLowerCase();
+            const allItems = document.querySelectorAll('.region-chip, .region-item');
+            let anyVisible = false;
+            allItems.forEach(el => {
+                const txt = el.textContent.toLowerCase();
+                const match = !query || txt.includes(query);
+                el.classList.toggle('search-hidden', !match);
+                if(match) anyVisible = true;
+            });
+            document.querySelectorAll('.task-section').forEach(sec => {
+                const visible = !query || sec.querySelectorAll('.region-chip:not(.search-hidden), .region-item:not(.search-hidden)').length > 0;
+                sec.classList.toggle('search-hidden', !visible);
+            });
+            const oldNr = document.getElementById('no-result');
+            if(oldNr) oldNr.remove();
+            if(query && !anyVisible) {
+                const nr = document.createElement('div'); nr.id='no-result'; nr.className='no-result';
+                nr.textContent = '没有匹配 "'+query+'" 的区域';
+                document.getElementById('region-list').appendChild(nr);
+            }
+        }
+
+        function selectAllVisible() {
+            regionsData.forEach(region => {
+                if(!(region.selected||region._selected)) toggleRegion(region.id);
+            });
+        }
+
+        function deselectAllVisible() {
+            regionsData.forEach(region => {
+                if((region.selected||region._selected) && !region.is_task_default) toggleRegion(region.id);
+            });
+        }
+
+        function fillTaskLegend() {
+            const lc = document.getElementById("task-legend");
+            lc.innerHTML = "";
+            if(taskGroupsData.length===0) { lc.style.display='none'; return; }
+            lc.style.display='';
+            taskGroupsData.forEach(task => {
+                const d = document.createElement("div"); d.className="legend-item";
+                d.innerHTML = '<span class="legend-dot" style="background:'+task.color+'"></span><span class="legend-name">'+task.name+'</span><span class="legend-badge">'+(task.regions||[]).length+'个区域</span>';
+                lc.appendChild(d);
+            });
+        }
+
+        function getTaskColor(regionId) {
+            const region = regionsData.find(r => r.id===regionId);
+            if(!region) return '#CCCCCC';
+            if(region.is_task_default) {
+                const t = taskGroupsData.find(g => g.regions.includes(regionId));
+                if(t) return t.color||DEFAULT_TASK_COLOR;
+            }
+            if(taskGroupsData.length===1) return taskGroupsData[0].color||DEFAULT_TASK_COLOR;
+            for(let i=0;i<taskGroupsData.length;i++) { if(taskGroupsData[i].regions.includes(regionId)) return taskGroupsData[i].color||DEFAULT_TASK_COLOR; }
+            return '#CCCCCC';
+        }
+
+        function findTaskIndexForRegion(regionId) {
+            if(taskGroupsData.length===0) return -1;
+            for(let i=0;i<taskGroupsData.length;i++) { if(taskGroupsData[i].regions.includes(regionId)) return i; }
+            return -1;
+        }
+
+        function saveCollapseStates() {
+            const states = {};
+            document.querySelectorAll('.task-section').forEach((sec, idx) => {
+                const body = sec.querySelector('.collapse-body');
+                const toggle = sec.querySelector('.collapse-toggle');
+                if (body && toggle) {
+                    states[idx] = body.style.display !== 'none' && body.style.display !== '';
+                }
+            });
+            return states;
+        }
+
+        function restoreCollapseStates(states) {
+            document.querySelectorAll('.task-section').forEach((sec, idx) => {
+                if (states[idx] === undefined) return;
+                const body = sec.querySelector('.collapse-body');
+                const toggle = sec.querySelector('.collapse-toggle');
+                if (!body || !toggle) return;
+                body.style.display = states[idx] ? 'flex' : 'none';
+                const arrow = toggle.querySelector('.collapse-arrow');
+                if (arrow) arrow.textContent = states[idx] ? '▼' : '▶';
+            });
+        }
+
+        function toggleRegion(regionId) {
+            if(dashboardMode) return;
+            const region = regionsData.find(r => r.id===regionId);
+            if(!region) return;
+            const sel = !!(region.selected||region._selected);
+            const st = saveCollapseStates();
+            if(sel) {
+                region._selected=false; region.selected=false;
+                updateMarker(regionId);
+            } else {
+                region._selected=true;
+                const tc = getTaskColor(region.id);
+                const isTR = taskGroupsData.some(t => t.regions.includes(region.id));
+                const dc = isTR ? (tc||DEFAULT_TASK_COLOR) : USER_SELECTED_COLOR;
+                region.color=dc; region.taskColor=dc;
+                updateMarker(regionId);
+                const poly = polygons[regionId];
+                if(poly) poly.setOptions({ fillColor:dc, strokeColor:dc, fillOpacity:0.22 });
+            }
+            fillInfoPanel();
+            restoreCollapseStates(st);
+            updateStats();
+            fetch('/api/toggle_region', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({region_id:region.id, selected:region.selected||region._selected, task_index:findTaskIndexForRegion(region.id)})
+            }).catch(() => {});
+        }
+
+        function updateStats() {
+            const c = regionsData.filter(r => r.selected||r._selected).length;
+            const el = document.getElementById('selected-count');
+            if(el) el.textContent = c;
+        }
+
+        function collectSelectedData() {
+            const allTR = new Set();
+            taskGroupsData.forEach(t => (t.regions||[]).forEach(r => allTR.add(r)));
+            const tasks = taskGroupsData.map((task) => {
+                const tSel = task.regions.filter(rid => { const r=regionsData.find(reg => reg.id===rid); return r&&(r.selected||r._selected); });
+                const rStatus = task.regions.map(rid => ({id:rid, status:(task.region_statuses&&task.region_statuses[rid])||1}));
+                return {id:task.id||'', name:task.name, regions:rStatus, color:task.color||DEFAULT_TASK_COLOR, selected_regions:tSel};
+            });
+            const otherSel = regionsData.filter(r => (r.selected||r._selected)&&!allTR.has(r.id)).map(r => r.id);
+            if(otherSel.length>0&&tasks.length===1) {
+                otherSel.forEach(rid => { if(!tasks[0].regions.find(r => r.id===rid)) tasks[0].regions.push({id:rid,status:1}); });
+                tasks[0].regions.sort((a,b) => a.id-b.id);
+                tasks[0].selected_regions = regionsData.filter(r => r.selected || r._selected).map(r => r.id);
+            }
+            const allS = regionsData.filter(r => r.selected||r._selected).map(r => r.id);
+            // 无 taskGroupsData 但有选中区域时，创建统一的任务条目
+            if (tasks.length === 0 && allS.length > 0) {
+                tasks.push({
+                    id: 'task_all',
+                    name: '全部清扫任务',
+                    regions: allS.map(function(rid) { return {id: rid, status: 1}; }),
+                    color: DEFAULT_TASK_COLOR,
+                    selected_regions: allS.slice()
+                });
+            }
+            return {tasks, selected_regions:allS, selected_count:allS.length};
+        }
+
+        function createRegionChip(region, isSelected) {
+            const chip = document.createElement("div");
+            chip.className = "region-chip"+(isSelected?" sel":" unsel");
+            const cb = document.createElement("div");
+            cb.className = "cb"+(isSelected?" checked":" unchecked");
+            cb.textContent = isSelected ? "✓" : "";
+            const cdot = document.createElement("span"); cdot.className="cl"; cdot.style.background=region.color;
+            const lbl = document.createElement("span"); lbl.className="lbl"+(isSelected?" sel":" unsel");
+            lbl.innerHTML = region.name+" (<b>"+(region.id+1)+"</b>)";
+            chip.appendChild(cb); chip.appendChild(cdot); chip.appendChild(lbl);
+            chip.addEventListener("click",() => toggleRegion(region.id));
+            return chip;
+        }
+
+        function fillInfoPanel() {
+            if(dashboardMode) { renderDashboard(); return; }
+            fillTaskLegend();
+            const lc = document.getElementById("region-list");
+            lc.innerHTML = "";
+
+            if(taskGroupsData.length>0) {
+                taskGroupsData.forEach((task, tIdx) => {
+                    const tRids = task.regions||[];
+                    const sel=[], unsel=[];
+                    tRids.forEach(rid => { const r=regionsData.find(r2 => r2.id===rid); if(!r) return; (r.selected||r._selected?sel:unsel).push(r); });
+
+                    const sec = document.createElement("div"); sec.className="task-section";
+                    const hdr = document.createElement("div");
+                    hdr.className = "task-header";
+                    hdr.innerHTML = '<span class="task-dot" style="background:'+task.color+'"></span><span class="task-name">'+(task.name||('任务'+(tIdx+1)))+'</span><span class="task-count">'+sel.length+'/'+tRids.length+'</span>';
+                    sec.appendChild(hdr);
+
+                    if(sel.length>0) { const body=document.createElement("div"); body.className="task-body"; sel.forEach(r => body.appendChild(createRegionChip(r,true))); sec.appendChild(body); }
+
+                    if(unsel.length>0) {
+                        const tog=document.createElement("div"); tog.className="collapse-toggle";
+                        tog.innerHTML='<span class="collapse-arrow">▶</span> 未选中 ('+unsel.length+')';
+                        const col=document.createElement("div"); col.className="collapse-body";
+                        tog.addEventListener("click",function(){ const o=col.style.display!=='none'&&col.style.display!==''; col.style.display=o?'none':'flex'; this.querySelector('.collapse-arrow').textContent=o?'▶':'▼'; });
+                        unsel.forEach(r => col.appendChild(createRegionChip(r,false)));
+                        sec.appendChild(tog); sec.appendChild(col);
+                    }
+                    lc.appendChild(sec);
+                });
+
+                const allTR = new Set();
+                taskGroupsData.forEach(t => (t.regions||[]).forEach(r => allTR.add(r)));
+                const otherR = regionsData.filter(r => !allTR.has(r.id));
+                if(otherR.length>0) {
+                    const oSec = document.createElement("div"); oSec.className="task-section";
+                    const oSel = otherR.filter(r => r.selected||r._selected);
+                    const oUnsel = otherR.filter(r => !(r.selected||r._selected));
+                    const oHdr = document.createElement("div"); oHdr.className="task-header";
+                    oHdr.innerHTML = '<span class="task-dot" style="background:#ccc"></span><span class="task-name" style="color:#999;">其他区域</span><span class="task-count">'+oSel.length+'/'+otherR.length+'</span>';
+                    oSec.appendChild(oHdr);
+                    if(oSel.length>0) { const oBd=document.createElement("div"); oBd.className="task-body"; oSel.forEach(r => oBd.appendChild(createRegionChip(r,true))); oSec.appendChild(oBd); }
+                    if(oUnsel.length>0) {
+                        const oTog=document.createElement("div"); oTog.className="collapse-toggle";
+                        oTog.innerHTML='<span class="collapse-arrow">▶</span> 未选中 ('+oUnsel.length+')';
+                        const oCol=document.createElement("div"); oCol.className="collapse-body";
+                        oTog.addEventListener("click",function(){ const o=oCol.style.display!=='none'&&oCol.style.display!==''; oCol.style.display=o?'none':'flex'; this.querySelector('.collapse-arrow').textContent=o?'▶':'▼'; });
+                        oUnsel.forEach(r => oCol.appendChild(createRegionChip(r,false)));
+                        oSec.appendChild(oTog); oSec.appendChild(oCol);
+                    }
+                    lc.appendChild(oSec);
+                }
+            } else {
+                regionsData.forEach(region => {
+                    const sel = region.selected||region._selected;
+                    const item = document.createElement("div");
+                    item.id = "region-item-"+region.id;
+                    item.className = "region-item"+(sel?"":" dimmed");
+                    const cb = document.createElement("div");
+                    cb.className = "region-checkbox"+(sel?" checked":" unchecked");
+                    cb.textContent = sel?"✓":"";
+                    cb.addEventListener("click",e => { e.stopPropagation(); toggleRegion(region.id); });
+                    const info = document.createElement("div"); info.className="info";
+                    info.innerHTML = '<div class="region-name" style="color:'+region.color+'">区域 '+(region.id+1)+'</div><div class="region-coords">['+region.center[0].toFixed(4)+', '+region.center[1].toFixed(4)+']</div>';
+                    const bar = document.createElement("div"); bar.className="color-bar"; bar.style.background=sel?region.color:'#E8ECF0';
+                    item.appendChild(bar); item.appendChild(cb); item.appendChild(info);
+                    item.addEventListener("click",() => fitViewToRegion(region.id));
+                    item.addEventListener("mouseenter",() => hoverRegion(region.id));
+                    item.addEventListener("mouseleave",() => unhoverRegion(region.id));
+                    lc.appendChild(item);
+                });
+            }
+        }
+
+        function showConfirmModal() {
+            const sel = regionsData.filter(r => r.selected||r._selected);
+            if(sel.length===0) { document.getElementById('exec-status').textContent='请先选择要清扫的区域'; return; }
+            const body = document.getElementById('modal-body');
+            body.innerHTML = '<div style="margin-bottom:12px;color:var(--text-muted);font-size:13px;">共选中 <strong style="color:var(--primary-light);">'+sel.length+'</strong> 个区域</div>';
+            if(taskGroupsData.length>0) {
+                taskGroupsData.forEach(task => {
+                    const c = task.regions.filter(rid => { const r=regionsData.find(r2 => r2.id===rid); return r&&(r.selected||r._selected); }).length;
+                    if(c===0) return;
+                    const d = document.createElement("div"); d.className="modal-task";
+                    d.innerHTML = '<span class="dot" style="background:'+task.color+'"></span><span class="name">'+task.name+'</span><span class="detail">'+c+'个区域</span>';
+                    body.appendChild(d);
+                });
+            }
+            document.getElementById('confirm-modal').classList.add('open');
+        }
+
+        function hideConfirmModal() { document.getElementById('confirm-modal').classList.remove('open'); }
+
+        /* ── Dashboard Functions ── */
+
+        function switchToDashboard() {
+            dashboardMode = true;
+            document.getElementById('selection-view').classList.add('hidden');
+            document.getElementById('dashboard-view').classList.add('active');
+            document.getElementById('search-box').style.display = 'none';
+            document.getElementById('exec-btn').style.display = 'none';
+            document.getElementById('exec-status').innerHTML = '<span style="color:#059669;font-weight:600;">✔ 任务已下发，实时监控中</span>';
+            renderDashboard();
+        }
+
+        function switchToSelection() {
+            dashboardMode = false;
+            document.getElementById('selection-view').classList.remove('hidden');
+            document.getElementById('dashboard-view').classList.remove('active');
+            document.getElementById('search-box').style.display = '';
+            document.getElementById('exec-btn').style.display = '';
+            document.getElementById('exec-status').innerHTML = '';
+        }
+
+        function getRegionStatuses() {
+            // Gather per-region status from taskGroupsData / region_statuses / _pollStatus
+            const statusMap = {};
+            taskGroupsData.forEach(task => {
+                const rStatuses = task.region_statuses || {};
+                (task.regions||[]).forEach(rid => {
+                    statusMap[rid] = rStatuses[rid] || 1;
+                });
+            });
+            // _pollStatus overrides static region_statuses for real-time updates
+            regionsData.forEach(r => {
+                if(r._pollStatus) statusMap[r.id] = r._pollStatus;
+            });
+            return statusMap;
+        }
+
+        function renderDashboard() {
+            const statusMap = getRegionStatuses();
+            let allRegionIds = [];
+            if(taskGroupsData.length > 0) {
+                const seen = new Set();
+                taskGroupsData.forEach(t => (t.regions||[]).forEach(rid => { if(!seen.has(rid)){seen.add(rid); allRegionIds.push(rid);} }));
+            } else {
+                allRegionIds = regionsData.filter(r => r.selected||r._selected).map(r => r.id);
+            }
+
+            const counts = {1:0, 2:0, 3:0};
+            allRegionIds.forEach(rid => { const s = statusMap[rid]||1; counts[s] = (counts[s]||0)+1; });
+            const total = allRegionIds.length || 1;
+
+            document.getElementById('stat-pending').textContent = counts[1]||0;
+            document.getElementById('stat-cleaning').textContent = counts[2]||0;
+            document.getElementById('stat-cleaned').textContent = counts[3]||0;
+
+            const pctCleaned = ((counts[3]||0)/total*100).toFixed(0);
+            const pctCleaning = ((counts[2]||0)/total*100).toFixed(0);
+            const pctPending = (100 - pctCleaned - pctCleaning);
+
+            document.getElementById('dash-progress-bar').innerHTML =
+                '<span class="seg cleaned" style="width:'+pctCleaned+'%"></span>'+
+                '<span class="seg cleaning" style="width:'+pctCleaning+'%"></span>'+
+                '<span class="seg pending" style="width:'+pctPending+'%"></span>';
+            document.getElementById('dash-progress-pct').textContent = ((counts[3]||0)+(counts[2]||0))+'/'+total+' 已处理';
+            document.getElementById('dash-progress-total').textContent = '共 '+total+' 个区域';
+
+            const tasksContainer = document.getElementById('dash-tasks');
+            tasksContainer.innerHTML = '';
+
+            if(taskGroupsData.length > 0) {
+                taskGroupsData.forEach(task => {
+                    const tRids = task.regions||[];
+                    if(tRids.length === 0) return;
+                    const card = document.createElement('div'); card.className = 'dash-task-card';
+                    const tc = {1:0, 2:0, 3:0};
+                    tRids.forEach(rid => { const s = statusMap[rid]||1; tc[s] = (tc[s]||0)+1; });
+
+                    const hdr = document.createElement('div'); hdr.className = 'dash-task-header';
+                    hdr.innerHTML = '<span class="tcolor" style="background:'+(task.color||DEFAULT_TASK_COLOR)+'"></span>'+
+                        '<span class="tname">'+(task.name||'任务')+'</span>'+
+                        '<span class="tstats">待'+tc[1]+' / 中'+tc[2]+' / 完'+tc[3]+'</span>';
+                    card.appendChild(hdr);
+
+                    const grid = document.createElement('div'); grid.className = 'dash-region-grid';
+                    tRids.forEach(rid => {
+                        const status = statusMap[rid]||1;
+                        const chip = document.createElement('div');
+                        chip.className = 'status-chip '+STATUS_CSSCLASS[status];
+                        chip.innerHTML = '<span class="sd"></span><span class="sid">'+(rid+1)+'</span><span class="stxt">'+STATUS_MAP[status]+'</span>';
+                        chip.addEventListener('click', () => fitViewToRegion(rid));
+                        grid.appendChild(chip);
+                    });
+                    card.appendChild(grid);
+                    tasksContainer.appendChild(card);
+                });
+            } else {
+                // Single task / no task groups
+                const allSelected = regionsData.filter(r => r.selected||r._selected);
+                if(allSelected.length > 0) {
+                    const card = document.createElement('div'); card.className = 'dash-task-card';
+                    const hdr = document.createElement('div'); hdr.className = 'dash-task-header';
+                    hdr.innerHTML = '<span class="tcolor" style="background:'+DEFAULT_TASK_COLOR+'"></span>'+
+                        '<span class="tname">当前清扫任务</span>'+
+                        '<span class="tstats">待'+counts[1]+' / 中'+counts[2]+' / 完'+counts[3]+'</span>';
+                    card.appendChild(hdr);
+
+                    const grid = document.createElement('div'); grid.className = 'dash-region-grid';
+                    allSelected.forEach(r => {
+                        const status = statusMap[r.id]||1;
+                        const chip = document.createElement('div');
+                        chip.className = 'status-chip '+STATUS_CSSCLASS[status];
+                        chip.innerHTML = '<span class="sd"></span><span class="sid">'+(r.id+1)+'</span><span class="stxt">'+STATUS_MAP[status]+'</span>';
+                        chip.addEventListener('click', () => fitViewToRegion(r.id));
+                        grid.appendChild(chip);
+                    });
+                    card.appendChild(grid);
+                    tasksContainer.appendChild(card);
+                } else {
+                    tasksContainer.innerHTML = '<div class="dash-empty">暂无选中区域</div>';
+                }
+            }
+        }
+
+        /* ── Confirmation Flow ── */
+
+        function confirmExecution() {
+            hideConfirmModal();
+            const btn = document.getElementById('exec-btn');
+            const status = document.getElementById('exec-status');
+            btn.disabled = true; btn.textContent = '保存中...';
+            btn.classList.remove('ready','confirmed','error'); btn.classList.add('confirming');
+            status.textContent = '';
+            const state = collectSelectedData();
+            state.tasks = state.tasks.map(t => ({id:t.id,name:t.name,regions:t.regions,color:t.color||DEFAULT_TASK_COLOR,selected_regions:t.selected_regions}));
+            fetch('/api/confirm', {
+                method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(state)
+            }).then(r => r.json())
+            .then(data => {
+                if(data.ok) {
+                    btn.disabled=false; btn.classList.remove('confirming'); btn.classList.add('confirmed');
+                    btn.textContent = '✓ 已确认执行';
+                    status.innerHTML = '<span style="color:#059669;">✔ 已同步于 '+(data.confirmed_at||'')+' &nbsp; <a href="#" onclick="resetConfirm()" style="color:#DC2626;text-decoration:none;font-weight:600;">↻ 重做</a></span>';
+                    // 同步确认后的任务数据到前端内存态，避免切换到看板时仍然渲染旧 taskGroupsData
+                    taskGroupsData.length = 0;
+                    (state.tasks || []).forEach(t => {
+                        taskGroupsData.push({
+                            id: t.id || '',
+                            name: t.name || '任务',
+                            regions: (t.regions || []).map(r => (typeof r === 'object' ? r.id : r)),
+                            color: t.color || DEFAULT_TASK_COLOR,
+                            selected_regions: (t.selected_regions || []).slice(),
+                            region_statuses: (t.regions || []).reduce((acc, r) => {
+                                const rid = (typeof r === 'object') ? r.id : r;
+                                acc[rid] = (typeof r === 'object' && r.status) ? r.status : 1;
+                                return acc;
+                            }, {})
+                        });
+                    });
+                    // Set status=1 (pending) for all selected regions, apply status color
+                    regionsData.forEach(region => {
+                        if(!(region.selected||region._selected)) return;
+                        region._pollStatus = 1;
+                        const sc = STATUS_COLORS[region._pollStatus]||DEFAULT_TASK_COLOR;
+                        region.color = sc;
+                        const poly = polygons[region.id]; if(poly) poly.setOptions({fillColor:sc,strokeColor:sc,fillOpacity:0.22});
+                        updateMarker(region.id);
+                    });
+                    switchToDashboard();
+                } else throw new Error(data.error||'未知错误');
+            }).catch(err => {
+                btn.disabled=false; btn.classList.remove('confirming'); btn.classList.add('error');
+                btn.textContent = '✗ 保存失败，点击重试';
+                btn.onclick = () => confirmExecution();
+                status.textContent = '错误: '+err.message;
+            });
+        }
+
+        function resetConfirm() {
+            switchToSelection();
+            const btn = document.getElementById('exec-btn');
+            const status = document.getElementById('exec-status');
+            btn.classList.remove('confirmed','error'); btn.classList.add('ready');
+            btn.textContent = '确认下发'; btn.disabled=false; btn.onclick=showConfirmModal;
+            btn.style.display = '';
+            status.innerHTML = '';
+            regionsData.forEach(region => {
+                if(!(region.selected||region._selected)) return;
+                region._pollStatus = undefined;
+                const isTR = taskGroupsData.some(t => t.regions.includes(region.id));
+                const rc = isTR ? (getTaskColor(region.id)||DEFAULT_TASK_COLOR) : USER_SELECTED_COLOR;
+                region.color = rc; region.taskColor = rc;
+                const poly = polygons[region.id]; if(poly) poly.setOptions({fillColor:rc,strokeColor:rc,fillOpacity:0.22});
+                updateMarker(region.id);
+            });
+            fillInfoPanel();
+        }
+
+        /* ── Initialization ── */
+
+        (function(){
+            function tryInit(){
+                if(typeof AMap!=='undefined'){
+                    initMap();
+                    // 显示监听路径
+                    var wt = document.getElementById('watch-path-text');
+                    if(wt && SESSION_PATH) { wt.textContent = SESSION_PATH + '/.index'; }
+                    setTimeout(function(){ pollTaskParams(); pollIndexFile(); }, 200);
+                    setInterval(pollVehicleInfo, 3000);
+                }
+            }
+            document.readyState==='loading'?document.addEventListener('DOMContentLoaded',tryInit):tryInit();
+        })();
+
+        window.addEventListener("resize",() => map.resize());
+
+        (function checkConfirmed(){
+            // 从 task_params 获取完整恢复数据，包含 selected_regions
+            fetch('/api/task_params').then(r => r.json()).then(data => {
+                if(!data.execution_confirmed) return;
+                var confirmedIds = data.selected_regions || [];
+                // 也尝试从 tasks 提取 region IDs
+                if (confirmedIds.length === 0 && data.tasks) {
+                    data.tasks.forEach(function(t) {
+                        (t.regions||[]).forEach(function(r) {
+                            var rid = typeof r === 'object' ? r.id : r;
+                            if (confirmedIds.indexOf(rid) === -1) confirmedIds.push(rid);
+                        });
+                    });
+                }
+                var btn = document.getElementById('exec-btn');
+                btn.classList.remove('ready'); btn.classList.add('confirmed');
+                btn.textContent = '✓ 已确认执行';
+                document.getElementById('exec-status').innerHTML = '<span style="color:#059669;">✔ 已同步于 '+(data.confirmed_at||'')+' &nbsp; <a href="#" onclick="resetConfirm()" style="color:#DC2626;text-decoration:none;font-weight:600;">↻ 重做</a></span>';
+                regionsData.forEach(function(region) {
+                    if (confirmedIds.indexOf(region.id) === -1) return;
+                    region._selected = true;
+                    region._pollStatus = 1;
+                    var sc = STATUS_COLORS[region._pollStatus]||DEFAULT_TASK_COLOR;
+                    region.color = sc;
+                    var poly = polygons[region.id]; if(poly) poly.setOptions({fillColor:sc,strokeColor:sc,fillOpacity:0.22});
+                    updateMarker(region.id);
+                });
+                fillInfoPanel();
+                switchToDashboard();
+            }).catch(function() {});
+        })();
+
+        function pollTaskParams() {
+            fetch('/api/task_params').then(r => r.json()).then(data => {
+                const tasks = data.tasks||[];
+                var sm = {};
+                tasks.forEach(t => (t.regions||[]).forEach(r => { const rid=typeof r==='object'?r.id:r; const st=typeof r==='object'?(r.status||1):1; sm[rid]=st; }));
+                // 无 tasks 时回退到 selected_regions
+                if (data.selected_regions && tasks.length === 0) {
+                    data.selected_regions.forEach(function(rid) { if (!(rid in sm)) sm[rid] = 1; });
+                }
+                regionsData.forEach(function(region) {
+                    const ns = sm[region.id];
+                    if(ns===undefined||ns===region._pollStatus) return;
+                    region._pollStatus = ns;
+                    if(!dashboardMode) return;
+                    const sc = STATUS_COLORS[ns]||DEFAULT_TASK_COLOR;
+                    const poly = polygons[region.id]; if(poly) poly.setOptions({fillColor:sc,strokeColor:sc,fillOpacity:0.22});
+                    const mk = markers.find(m => m.id===region.id);
+                    if(mk&&mk.el) mk.el.style.background=sc;
+                });
+                if(dashboardMode) renderDashboard();
+            }).catch(function() {});
+        }
+        setInterval(pollTaskParams, 3000);
+
+        /* ── .index 文件监听 ── */
+        function pollIndexFile() {
+            fetch('/api/index').then(r => r.json()).then(function(data) {
+                if(!data || data.exists === false) {
+                    // .index 尚未创建——显示等待状态
+                    var wt = document.getElementById('watch-path-text');
+                    if(wt && SESSION_PATH) wt.textContent = SESSION_PATH + '/.index (等待创建...)';
+                    return;
+                }
+                // .index 存在——解析状态数据
+                var wt = document.getElementById('watch-path-text');
+                if(wt && SESSION_PATH) wt.textContent = SESSION_PATH + '/.index';
+                // 如果 .index 包含 region_status 字典，更新地图状态
+                var sm = data.region_status || data.status || {};
+                var hasUpdates = false;
+                regionsData.forEach(function(region) {
+                    var ns = sm[region.id];
+                    if(ns === undefined) ns = sm[String(region.id)]; // 支持字符串键
+                    if(ns === undefined || ns === region._pollStatus) return;
+                    region._pollStatus = ns;
+                    hasUpdates = true;
+                    if(!dashboardMode) return;
+                    var sc = STATUS_COLORS[ns]||DEFAULT_TASK_COLOR;
+                    var poly = polygons[region.id]; if(poly) poly.setOptions({fillColor:sc,strokeColor:sc,fillOpacity:0.22});
+                    var mk = markers.find(function(m) { return m.id===region.id; });
+                    if(mk&&mk.el) mk.el.style.background=sc;
+                });
+                if(hasUpdates && dashboardMode) renderDashboard();
+            }).catch(function() {});
+        }
+        setInterval(pollIndexFile, 5000);
+    </script>
+</body>
+</html>

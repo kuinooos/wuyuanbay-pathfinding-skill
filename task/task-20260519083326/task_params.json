@@ -1,0 +1,52 @@
+{
+  "task_id": "task-20260519083326",
+  "user_prompt": "打扫海水浴场到cafe",
+  "task_type": "path_cleaning",
+  "tasks": [
+    {
+      "id": "20260519083326_session1",
+      "name": "海水浴场到cafe",
+      "regions": [
+        {
+          "id": 21,
+          "status": 2
+        },
+        {
+          "id": 22,
+          "status": 1
+        },
+        {
+          "id": 23,
+          "status": 1
+        },
+        {
+          "id": 24,
+          "status": 2
+        },
+        {
+          "id": 25,
+          "status": 1
+        },
+        {
+          "id": 26,
+          "status": 3
+        }
+      ],
+      "color": "#00008B",
+      "selected_regions": [
+        22,
+        25,
+        26
+      ]
+    }
+  ],
+  "selected_regions": [
+    22,
+    25,
+    26
+  ],
+  "total_regions": 39,
+  "selected_count": 3,
+  "execution_confirmed": true,
+  "confirmed_at": "2026-05-19 08:36:24"
+}

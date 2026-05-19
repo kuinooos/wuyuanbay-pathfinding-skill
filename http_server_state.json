@@ -1,0 +1,10 @@
+{
+  "host": "0.0.0.0",
+  "port": 8001,
+  "pid": 160950,
+  "serve_dir": "/home/jfcf/.hermes/skills/car-toolv1.0.1",
+  "task_dir": "/home/jfcf/.hermes/skills/car-toolv1.0.1/task/task-20260519092001",
+  "feature_version": "vehicle_poll_v1",
+  "vehicle_dev_id": "UD130-2V310-41204-0730",
+  "vehicle_poll_interval": 10
+}
